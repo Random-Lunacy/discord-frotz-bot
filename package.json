@@ -1,0 +1,29 @@
+{
+    "name": "discord-frotz-bot",
+    "version": "1.0.0",
+    "description": "Discord bot to interface with dfrotz",
+    "main": "frotz-bot.js",
+    "scripts": {
+        "start": "node ./frotz-bot.js",
+        "lint": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js",
+        "lint-fix": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js --fix"        
+    },
+    "author": "NepoKama",
+    "license": "MIT",
+    "dependencies": {
+        "discord.js": "^14.13.0",
+        "dotenv": "^16.3.1"
+    },
+    "imports": {
+        "#events/*": "./events/*",
+        "#commands/*": "./events/commands/*.js"
+    },
+    "type": "module",
+    "devDependencies": {
+        "eslint": "^8.49.0",
+        "eslint-config-standard": "^17.1.0",
+        "eslint-plugin-import": "^2.28.1",
+        "eslint-plugin-n": "^16.1.0",
+        "eslint-plugin-promise": "^6.1.1"
+    }
+}
