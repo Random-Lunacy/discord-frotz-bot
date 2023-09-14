@@ -131,3 +131,7 @@ dist
 
 # dotenv
 .env
+
+# game config
+games/games.json
+games/*.z*

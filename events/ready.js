@@ -1,5 +1,4 @@
 import fs from 'fs';
-
 const once = true;
 const name = 'ready';
 
