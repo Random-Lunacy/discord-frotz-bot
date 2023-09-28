@@ -1,6 +1,7 @@
 import { } from 'dotenv/config';
 import fs from 'fs';
 import { Client, GatewayIntentBits } from 'discord.js';
+import { sharedData } from './sharedData.js';
 
 // Create a new client instance
 const client = new Client({
@@ -11,6 +12,8 @@ const client = new Client({
         GatewayIntentBits.GuildMembers,
     ],
 });
+
+sharedData.client = client;
 
 // Fetch all js files in ./events
 const events = fs
@@ -36,3 +39,4 @@ for (let event of events) {
 
 // Login with the environment data
 client.login(process.env.BOT_TOKEN);
+

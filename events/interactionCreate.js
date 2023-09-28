@@ -1,3 +1,7 @@
+import { sharedData } from '../sharedData.js';
+import { Logger } from '../logger.js';
+
+
 const once = false;
 const name = 'interactionCreate';
 
@@ -9,3 +13,9 @@ async function invoke(interaction) {
 }
 
 export { once, name, invoke };
+sharedData.client.on('messageCreate', (message) => {
+    // Check if the message is sent in a specific channel
+    if (sharedData.gameActive && sharedData.playingGame && message.channel.id === sharedData.channel.id) {
+        Logger.log('Input: ' + message.content);
+    }
+});

@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node ./frotz-bot.js",
         "lint": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js",
-        "lint-fix": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js --fix"        
+        "lint-fix": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js --fix"
     },
     "author": "NepoKama",
     "license": "MIT",
@@ -24,6 +24,7 @@
         "eslint-config-standard": "^17.1.0",
         "eslint-plugin-import": "^2.28.1",
         "eslint-plugin-n": "^16.1.0",
-        "eslint-plugin-promise": "^6.1.1"
+        "eslint-plugin-promise": "^6.1.1",
+        "eslint-plugin-sonarjs": "^0.21.0"
     }
 }

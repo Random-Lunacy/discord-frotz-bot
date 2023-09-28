@@ -1,4 +1,6 @@
 import fs from 'fs';
+import { Logger } from '../logger.js';
+
 const once = true;
 const name = 'ready';
 
@@ -17,7 +19,7 @@ async function invoke(client) {
 
     client.application.commands.set(commandsArray);
 
-    console.log(`Successfully logged in as ${client.user.tag}!`);
+    Logger.log(`Successfully logged in as ${client.user.tag}!`);
 }
 
 export { once, name, invoke };
