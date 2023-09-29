@@ -5,11 +5,11 @@ import { sharedData } from '../../sharedData.js';
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('start')
-        .setDescription('Starts the selected game.');
+        .setDescription('Start a game. If not set with `/channel` the game will run in the current channel.');
 
     command.addStringOption((option) =>
         option.setName('game')
-            .setDescription('Start a game. If not set with `/channel` the game will run in the current channel.')
+            .setDescription('Game to start.')
             .setRequired(true));
 
     let x, current;
@@ -38,16 +38,24 @@ const invoke = (interaction) => {
         sharedData.channel = interaction.channel;
     }
 
-    sharedData.gameId = game;
-    sharedData.gameActive = true;
-    sharedData.playingGame = true;
-
-    let gameObj =  sharedData.gameList.games.filter(it => it.id === game)[0];
+    let gameObj = sharedData.gameList.games.filter(it => it.id === game)[0];
 
     interaction.reply({
         content: 'Starting ' + gameObj.name + ' in <#' + sharedData.channel.id + '>.',
         ephemeral: true,
     });
+
+    if (!sharedData.frotzClient.startGame(gameObj.file)) {
+        interaction.reply({
+            content: sharedData.frotzClient.lastError.message,
+            ephemeral: true,
+        });
+        return;
+    }
+
+    sharedData.gameId = game;
+    sharedData.gameActive = true;
+    sharedData.playingGame = true;
 };
 
 export { create, invoke };

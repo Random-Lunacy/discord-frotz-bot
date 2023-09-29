@@ -3,7 +3,6 @@
         {
             "id": "id",
             "name": "name",
-            "description": "description",
             "file": "file"
         }
     ]

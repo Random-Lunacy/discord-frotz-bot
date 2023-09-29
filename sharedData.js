@@ -1,6 +1,7 @@
 // sharedData.js
 import { } from 'dotenv/config';
 import fs from 'fs';
+import { Frotz } from './frotzClient.js';
 
 const data = fs.readFileSync(`${process.env.GAME_FOLDER}/games.json`);
 
@@ -13,5 +14,6 @@ export const sharedData = {
     gameList: JSON.parse(data),
     playingGame: false,
     gameActive: false,
+    frotzClient: Frotz,
     // Add more properties as needed
 };
