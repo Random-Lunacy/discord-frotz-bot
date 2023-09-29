@@ -18,6 +18,7 @@ const invoke = (interaction) => {
         sharedData.playingGame = false;
         sharedData.gameActive = false;
         sharedData.gameId = null;
+        sharedData.frotzClient.stopGame();
         interaction.reply({
             content: 'Game stopped.',
             ephemeral: true,

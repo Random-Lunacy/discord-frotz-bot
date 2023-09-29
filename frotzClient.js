@@ -83,8 +83,6 @@ class FrotzClient {
         let output = '';
 
         for (const element of splitRaw) {
-            Logger.log('[' + element + ']');
-
             if (element.trim() === 'Using normal formatting.') {
                 continue;
             }
@@ -117,6 +115,11 @@ class FrotzClient {
 
     processInput(message) {
         this.dFrotz.stdin.write(message + '\n');
+    }
+
+    stopGame() {
+        // cleanup the child process
+        this.dFrotz.kill();
     }
 }
 
