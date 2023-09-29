@@ -44,7 +44,7 @@ class FrotzClient {
         // -p   plain ASCII output only
         // -m   turn off MORE prompts
         // -R   restrict Frotz read/write to the specified folder
-        this.dFrotz = spawn('dfrotz', ['-p', '-m', this.gamePath]);
+        this.dFrotz = spawn('dfrotz', ['-p', '-m', '-R', sharedData.gameFolder, this.gamePath]);
 
         // Setup stream from frotz's stdout so that we can get its output
         this.dFrotz.stdout.on('data', (chunk) => {
