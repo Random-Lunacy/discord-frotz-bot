@@ -4,7 +4,8 @@ module.exports = {
         "commonjs": true,
         "es2021": true
     },
-    "extends": "eslint:recommended",
+    "plugins": ["sonarjs"],
+    "extends": ["plugin:sonarjs/recommended"],
     "overrides": [
         {
             "files": [

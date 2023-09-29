@@ -1,0 +1,9 @@
+{
+    "games" : [
+        {
+            "id": "id",
+            "name": "name",
+            "file": "file"
+        }
+    ]
+}
