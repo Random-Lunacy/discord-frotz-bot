@@ -40,9 +40,18 @@ To get a local copy up and running follow these simple example steps.
 
 ### Configure a Discord Bot Account
 
-Follow the steps for [Creating a Bot Account](https://discordpy.readthedocs.io/en/stable/discord.html) and connecting it to your Discord server.
+Follow the steps for [Creating a Bot Account](https://discordpy.readthedocs.io/en/stable/discord.html) and connecting it
+to your Discord server.
 
-Make note of your bot’s token, you will need to add it to the configuration for `discord-frotz-bot`. Note  that this token is essentially your bot’s password. You should never commit this token to the `discord-frotz-bot` repository or share this token with anyone else.
+Once you've created your bot account in Discord you will need to enable the **Message Content Intent** under **Bot** ->
+**Privileged Gateway Intents**. 
+
+When building a URL to invite the bot account to a server select **Read Messages/View Channels** and **Send Messages**
+under **Bot Permissions**.
+
+Make note of your bot’s token, you will need to add it to the configuration for `discord-frotz-bot`. Note  that this
+token is essentially your bot’s password. You should never commit this token to the repository or share this token with
+anyone else.
 
 ### Installation
 
@@ -70,17 +79,13 @@ Make note of your bot’s token, you will need to add it to the configuration fo
 <!-- USAGE EXAMPLES -->
 ## Usage
 
-TODO: examples of how  project can be used.
+TODO: Add examples of how to use the bot.
 
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
-
-See the [open issues](https://github.com/Random-Lunacy/discord-frotz-bot/issues) for a full list of proposed features (and known issues).
+See the [open issues](https://github.com/Random-Lunacy/discord-frotz-bot/issues) for a full list of proposed features
+(and known issues).
 
 <!-- LICENSE -->
 ## License
@@ -97,5 +102,3 @@ Project Link: [https://github.com/Random-Lunacy/discord-frotz-bot](https://githu
 
 * Many thanks to the team who build and maintain [Frotz](https://661.org/proj/if/frotz/). Without their work
   this bot would not be possible. 
-* []()
-* []()
