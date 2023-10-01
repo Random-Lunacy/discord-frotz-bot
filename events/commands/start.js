@@ -1,7 +1,12 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { sharedData } from '../../sharedData.js';
 
-// Creates an Object in JSON with the data required by Discord's API to create a SlashCommand
+/**
+ * Creates a new Slash Command for starting a game.
+ *
+ * @return {Object} The JSON representation of the created command.
+ */
+
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('start')
@@ -21,7 +26,12 @@ const create = () => {
     return command.toJSON();
 };
 
-// Called by the interactionCreate event listener when the corresponding command is invoked
+
+/**
+ * Invokes the specified interaction.
+ *
+ * @param {object} interaction - The interaction object to be invoked.
+ */
 const invoke = (interaction) => {
     const game = interaction.options.getString('game') ?? 'No game provided';
 
@@ -55,7 +65,7 @@ const invoke = (interaction) => {
 
     sharedData.gameId = game;
     sharedData.gameActive = true;
-    sharedData.playingGame = true;
+    sharedData.listenToGame = true;
 };
 
 export { create, invoke };

@@ -44,7 +44,7 @@ class FrotzClient {
         // -p   plain ASCII output only
         // -m   turn off MORE prompts
         // -R   restrict Frotz read/write to the specified folder
-        this.dFrotz = spawn('dfrotz', ['-p', '-m', this.gamePath]);
+        this.dFrotz = spawn('dfrotz', ['-p', '-m', '-R', sharedData.gameFolder, this.gamePath]);
 
         // Setup stream from frotz's stdout so that we can get its output
         this.dFrotz.stdout.on('data', (chunk) => {
@@ -78,6 +78,12 @@ class FrotzClient {
         }
     }
 
+    /**
+     * Clean up the output by removing certain elements.
+     *
+     * @param {string} raw - The raw output to clean up.
+     * @return {string} The cleaned up output.
+     */
     cleanUpOutput(raw) {
         let splitRaw = raw.split(/[\n]|[\r]/);
         let output = '';
@@ -91,9 +97,14 @@ class FrotzClient {
                 continue;
             }
 
+            if (element.trim().substr(0, 25) === 'Please enter a filename [') {
+                continue;
+            }
+
             if (output.length === 0 && element.trim() === '') {
                 continue;
             }
+
             output += element.trim();
             output += '\r';
         }
@@ -101,25 +112,60 @@ class FrotzClient {
         return output;
     }
 
+    /**
+     * Sends the game output to the channel.
+     */
     sendGameOutput() {
         let final = Buffer.from(this.compiledOutput, 'utf-8').toString();
 
         final = final.replace('\r', '\n');
         final = final.slice(0, final.length - 2).trim();
 
-        final = '```\n' + this.cleanUpOutput(final, true) + '\n```';
+        // Don't send empty output
+        if (final.length > 0) {
+            // Use markdown to set as mono-spaced
+            final = '```\n' + this.cleanUpOutput(final, true) + '\n```';
+            sharedData.channel.send(final);
+        }
 
-        sharedData.channel.send(final);
         this.compiledOutput = '';
     }
 
+    /**
+     * Send the input message to dfrotz.
+     *
+     * @param {string} message - The input message to be processed.
+     */
     processInput(message) {
         this.dFrotz.stdin.write(message + '\n');
     }
 
+    /**
+     * Stops the game and performs cleanup of the dfrotz child process.
+     */
     stopGame() {
         // cleanup the child process
         this.dFrotz.kill();
+    }
+
+    /**
+     * Save the game at the specified path.
+     *
+     * @param {string} savePath - The path where the game should be saved.
+     */
+    saveGame(savePath) {
+        this.dFrotz.stdin.write('save\n');
+        this.dFrotz.stdin.write(savePath + '\n');
+    }
+
+    /**
+     * Restore the game from the specified path.
+     *
+     * @param {string} savePath - The path to teh save file to be restored.
+     */
+    restoreGame(savePath) {
+        this.dFrotz.stdin.write('restore\n');
+        this.dFrotz.stdin.write(savePath + '\n');
     }
 }
 

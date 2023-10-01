@@ -22,12 +22,12 @@ const invoke = (interaction) => {
 
     names += 'Game ID\n';
     names += 'Channel\n';
-    names += 'Playing Game\n';
+    names += 'Listening to Game\n';
     names += 'Game Active\n';
 
     values += sharedData.gameId == null ? 'No game selected\n' : sharedData.gameId + '\n';
     values += sharedData.channel == null ? 'No channel selected\n' : sharedData.channel.name + '\n';
-    values += sharedData.playingGame + '\n';
+    values += sharedData.listenToGame + '\n';
     values += sharedData.gameActive + '\n';
 
     embed.addFields([

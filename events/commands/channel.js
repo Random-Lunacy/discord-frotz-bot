@@ -3,7 +3,11 @@ import { SlashCommandBuilder, ChannelType } from 'discord.js';
 // Import the shared data object
 import { sharedData } from '../../sharedData.js';
 
-// Creates an Object in JSON with the data required by Discord's API to create a SlashCommand
+/**
+ * Creates a new SlashCommandBuilder object to set the channel.
+ *
+ * @return {Object} The JSON representation of the command.
+ */
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('channel')
@@ -17,7 +21,9 @@ const create = () => {
     return command.toJSON();
 };
 
-// Called by the interactionCreate event listener when the corresponding command is invoked
+/**
+ * Invokes the function with the given interaction.
+ */
 const invoke = (interaction) => {
     const channel = interaction.options.getChannel('channel');
     if (channel != null) {
@@ -33,4 +39,3 @@ const invoke = (interaction) => {
 };
 
 export { create, invoke };
-
