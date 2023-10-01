@@ -1,17 +1,15 @@
-import { SlashCommandBuilder } from 'discord.js';
-
-// Import the shared data object
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } from 'discord.js';
 import { sharedData } from '../../sharedData.js';
 
 /**
- * Creates a new slash command for pausing or unpausing the game.
+ * Creates a new Slash Command for quitting the game.
  *
- * @return {Object} The JSON representation of the slash command.
+ * @return {Object} The JSON representation of the created command.
  */
 const create = () => {
     const command = new SlashCommandBuilder()
-        .setName('pause')
-        .setDescription('Pause or unpause the game (toggles whether the bot will listen to messages).');
+        .setName('quit')
+        .setDescription('Quits the game. All progress since the game was last saved will be lost.');
 
     return command.toJSON();
 };
@@ -29,20 +27,12 @@ async function invoke(interaction) {
         });
         return;
     }
-    let confirmButtonText = 'Pause Game';
-    let confirmMessage = 'Are you sure you want to pause the game? The game will stop listening to messages while paused.';
-    let responseMessage = 'Game paused.';
-    if (!sharedData.listenToGame) {
-        confirmButtonText = 'Unpause Game';
-        confirmMessage = 'Are you sure you want to unpause the game? The game will resume listening to messages.';
-        responseMessage = 'Game unpaused.';
-    }
 
     let gameName = sharedData.gameList.games.filter(it => it.id === sharedData.gameId)[0].name;
 
     const confirm = new ButtonBuilder()
         .setCustomId('confirm')
-        .setLabel(confirmButtonText)
+        .setLabel('Quit Game')
         .setStyle(ButtonStyle.Danger);
 
     const cancel = new ButtonBuilder()
@@ -54,7 +44,7 @@ async function invoke(interaction) {
         .addComponents(cancel, confirm);
 
     const response = await interaction.reply({
-        content: confirmMessage,
+        content: 'Are you sure you want quit ' + gameName + '? All progress since last save will be lost.',
         components: [row],
     });
 
@@ -63,14 +53,19 @@ async function invoke(interaction) {
         const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 60_000 });
 
         if (confirmation.customId === 'confirm') {
-            sharedData.listenToGame = !sharedData.listenToGame;
+            sharedData.playingGame = false;
+            sharedData.gameActive = false;
+            sharedData.gameId = null;
+            sharedData.frotzClient.stopGame();
 
-            await confirmation.update({ content: responseMessage + gameName + '.', components: [] });
+            let gameObj = sharedData.gameList.games.filter(it => it.id === sharedData.gameId)[0];
+
+            await confirmation.update({ content: 'Quitting ' + gameName + '.', components: [] });
         } else if (confirmation.customId === 'cancel') {
-            await confirmation.update({ content: 'Pause state toggle cancelled.', components: [] });
+            await confirmation.update({ content: 'Quit cancelled.', components: [] });
         }
     } catch (e) {
-        await interaction.editReply({ content: 'Confirmation not received within 1 minute, cancelling toggle of pause state.', components: [] });
+        await interaction.editReply({ content: 'Confirmation not received within 1 minute, cancelling quit.', components: [] });
     }
 }
 

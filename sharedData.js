@@ -1,4 +1,4 @@
-// sharedData.js
+// Data shared across the bot
 import { } from 'dotenv/config';
 import fs from 'fs';
 import { Frotz } from './frotzClient.js';
@@ -12,8 +12,7 @@ export const sharedData = {
     channel: null,
     gameFolder: process.env.GAME_FOLDER,
     gameList: JSON.parse(data),
-    playingGame: false,
+    listenToGame: false,
     gameActive: false,
     frotzClient: Frotz,
-    // Add more properties as needed
 };

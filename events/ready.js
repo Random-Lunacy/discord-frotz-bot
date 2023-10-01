@@ -4,6 +4,14 @@ import { Logger } from '../logger.js';
 const once = true;
 const name = 'ready';
 
+/**
+ * Invokes the client by loading commands from the './events/commands' directory
+ * and sets them as application commands. It also logs a success message after
+ * the client is logged in.
+ *
+ * @param {Object} client - The client object representing the Discord bot.
+ * @return {Promise<void>} - A promise that resolves once the commands are set.
+ */
 async function invoke(client) {
     const commands = fs
         .readdirSync('./events/commands')
