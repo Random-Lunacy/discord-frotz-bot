@@ -40,7 +40,7 @@ To get a local copy up and running follow these simple example steps.
 
 ### Configure a Discord Bot Account
 
-Follow the steps for [Creating a Bot Account](https://discordpy.readthedocs.io/en/stable/discord.html) and connecting it
+Follow the steps for [Creating a Bot Account](https://discord.readthedocs.io/en/stable/discord.html) and connecting it
 to your Discord server.
 
 Once you've created your bot account in Discord you will need to enable the **Message Content Intent** under **Bot** ->
