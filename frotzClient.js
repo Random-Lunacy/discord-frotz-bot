@@ -4,11 +4,14 @@ import { Logger } from './logger.js';
 import { StringDecoder } from 'string_decoder';
 import { spawn } from 'child_process';
 import fs from 'fs';
+import { CleanAnsi } from './cleanAnsi.js';
 
 class FrotzClient {
     dFrotz = null;
+    rawOutput = '';
     compiledOutput = '';
     gamePath = '';
+    gameHeader = '';
 
     lastError = null;
     decoder = new StringDecoder('utf8');
@@ -33,18 +36,29 @@ class FrotzClient {
         this.gamePath = sharedData.gameFolder + '/' + gameFile;
 
         if (!this.verifyGameFile(this.gamePath)) {
-            Logger.error(`Failed to launch Frotz: the game file ${gameFile} does not exist.`);
+            Logger.log({
+                level: 'warn',
+                message: `Failed to launch Frotz: the game file ${gameFile} does not exist.`
+            });
             this.lastError = new Error(`Failed to launch Frotz: the game file ${gameFile} does not exist.`);
             return false;
         }
 
-        Logger.log(`Launching Frotz: ${this.gamePath}`);
+        Logger.log({
+            level: 'info',
+            message: `Launching Frotz: ${this.gamePath}`
+        });
 
-        // Create Frotz child process for the game
+        // Create dFrotz child process for the game
         // -p   plain ASCII output only
         // -m   turn off MORE prompts
         // -R   restrict Frotz read/write to the specified folder
-        this.dFrotz = spawn('dfrotz', ['-p', '-m', '-R', sharedData.gameFolder, this.gamePath]);
+        // -Z   Suppress errors in output
+        this.dFrotz = spawn('dfrotz', ['-f', 'ansi', '-m', '-Z', '0', '-R', sharedData.gameFolder, this.gamePath]);
+
+        // Create Frotz child process for the game
+        //this.dFrotz = spawn('frotz', ['-p', '-Z', '0', '-R', sharedData.gameFolder, this.gamePath]);
+
 
         // Setup stream from frotz's stdout so that we can get its output
         this.dFrotz.stdout.on('data', (chunk) => {
@@ -63,18 +77,11 @@ class FrotzClient {
     receiveFrotzOutput(chunk) {
         let _string = this.decoder.write(chunk);
 
-        // Skip blank output
-        if (_string.trim() === '') {
-            return;
-        }
-
-        let output = this.cleanUpOutput(_string);
-
-        this.compiledOutput += output;
+        this.rawOutput += _string;
 
         // this marks the end of input
-        if (output.match(/(>\r)/)) {
-            this.sendGameOutput();
+        if (this.rawOutput.match(/(\n>)/)) {
+            this.cleanUpOutput();
         }
     }
 
@@ -84,47 +91,64 @@ class FrotzClient {
      * @param {string} raw - The raw output to clean up.
      * @return {string} The cleaned up output.
      */
-    cleanUpOutput(raw) {
-        let splitRaw = raw.split(/[\n]|[\r]/);
-        let output = '';
+    cleanUpOutput() {
+        let splitRaw = this.rawOutput.split(/\n/g);
+        let outputArray = '';
 
         for (const element of splitRaw) {
-            if (element.trim() === 'Using normal formatting.') {
+            let cleanedElement = CleanAnsi.replace(element);
+
+            if (cleanedElement.trim() === 'Using ANSI formatting.') {
                 continue;
             }
 
-            if (element.trim() === 'Loading ' + this.gamePath + '.') {
+            if (cleanedElement.trim() === 'Loading ' + this.gamePath + '.') {
                 continue;
             }
 
-            if (element.trim().substr(0, 25) === 'Please enter a filename [') {
+            if (cleanedElement.trim().startsWith('Please enter a filename [')) {
                 continue;
             }
 
-            if (output.length === 0 && element.trim() === '') {
+            if (cleanedElement.trim() === ('>')) {
                 continue;
             }
 
-            output += element.trim();
-            output += '\r';
+            if (cleanedElement.length === 0) {
+                continue;
+            }
+
+            if (cleanedElement.trim().startsWith('[rev]')) {
+                this.gameHeader = cleanedElement.substring(5, cleanedElement.length).trim();
+                continue;
+            }
+
+            if (cleanedElement.trim().length === 0) {
+                this.compiledOutput = outputArray;
+                this.sendOutput();
+                outputArray = '';
+                continue;
+            }
+
+            outputArray += cleanedElement.trimEnd() + ' \n';
+
         }
 
-        return output;
+        this.rawOutput = '';
+        if (outputArray.length > 0) {
+            this.compiledOutput = outputArray;
+            this.sendOutput();
+        }
     }
 
     /**
      * Sends the game output to the channel.
      */
-    sendGameOutput() {
+    sendOutput() {
         let final = Buffer.from(this.compiledOutput, 'utf-8').toString();
-
-        final = final.replace('\r', '\n');
-        final = final.slice(0, final.length - 2).trim();
 
         // Don't send empty output
         if (final.length > 0) {
-            // Use markdown to set as mono-spaced
-            final = '```\n' + this.cleanUpOutput(final, true) + '\n```';
             sharedData.channel.send(final);
         }
 

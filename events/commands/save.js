@@ -53,9 +53,6 @@ async function invoke(interaction) {
         const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 60_000 });
 
         if (confirmation.customId === 'confirm') {
-            Logger.log(interaction.user.id);
-            Logger.log(interaction.user.username);
-            Logger.log(interaction.user.globalName);
             let unixTime = Math.floor(Date.now() / 1000);
             let saveFile = `${sharedData.gameId}-${unixTime}-${interaction.user.id}.qzl`;
             let savePath = `${sharedData.gameFolder}/${saveFile}`;

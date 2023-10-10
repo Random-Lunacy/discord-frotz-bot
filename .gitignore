@@ -132,7 +132,11 @@ dist
 # dotenv
 .env
 
+# logs
+logs/*.log
+
 # game config, games and saves
 games/games.json
 games/*.z*
+games/*.Z*
 games/*.qzl

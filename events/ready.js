@@ -27,7 +27,10 @@ async function invoke(client) {
 
     client.application.commands.set(commandsArray);
 
-    Logger.log(`Successfully logged in as ${client.user.tag}!`);
+    Logger.log({
+        level: 'info',
+        message: `Successfully logged in as ${client.user.tag}!`
+    });
 }
 
 export { once, name, invoke };
