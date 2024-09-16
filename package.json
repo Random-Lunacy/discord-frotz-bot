@@ -13,7 +13,7 @@
     "dependencies": {
         "dateformat": "^5.0.3",
         "discord.js": "^14.16.1",
-        "dotenv": "^16.3.1",
+        "dotenv": "^16.4.5",
         "glob": "^10.3.10",
         "winston": "^3.14.2"
     },
