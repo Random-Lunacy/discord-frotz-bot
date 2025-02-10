@@ -4,8 +4,6 @@ module.exports = {
         commonjs: true,
         es2021: true,
     },
-    plugins: ['sonarjs'],
-    extends: ['plugin:sonarjs/recommended'],
     overrides: [
         {
             files: ['.eslintrc.{js,cjs}'],
