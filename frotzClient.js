@@ -1,5 +1,5 @@
 import { sharedData } from './sharedData.js';
-import { } from 'dotenv/config';
+import {} from 'dotenv/config';
 import { Logger } from './logger.js';
 import { StringDecoder } from 'string_decoder';
 import { spawn } from 'child_process';
@@ -38,15 +38,17 @@ class FrotzClient {
         if (!this.verifyGameFile(this.gamePath)) {
             Logger.log({
                 level: 'warn',
-                message: `Failed to launch Frotz: the game file ${gameFile} does not exist.`
+                message: `Failed to launch Frotz: the game file ${gameFile} does not exist.`,
             });
-            this.lastError = new Error(`Failed to launch Frotz: the game file ${gameFile} does not exist.`);
+            this.lastError = new Error(
+                `Failed to launch Frotz: the game file ${gameFile} does not exist.`
+            );
             return false;
         }
 
         Logger.log({
             level: 'info',
-            message: `Launching Frotz: ${this.gamePath}`
+            message: `Launching Frotz: ${this.gamePath}`,
         });
 
         // Create dFrotz child process for the game
@@ -54,11 +56,19 @@ class FrotzClient {
         // -m   turn off MORE prompts
         // -R   restrict Frotz read/write to the specified folder
         // -Z   Suppress errors in output
-        this.dFrotz = spawn('dfrotz', ['-f', 'ansi', '-m', '-Z', '0', '-R', sharedData.gameFolder, this.gamePath]);
+        this.dFrotz = spawn('dfrotz', [
+            '-f',
+            'ansi',
+            '-m',
+            '-Z',
+            '0',
+            '-R',
+            sharedData.gameFolder,
+            this.gamePath,
+        ]);
 
         // Create Frotz child process for the game
         //this.dFrotz = spawn('frotz', ['-p', '-Z', '0', '-R', sharedData.gameFolder, this.gamePath]);
-
 
         // Setup stream from frotz's stdout so that we can get its output
         this.dFrotz.stdout.on('data', (chunk) => {
@@ -98,12 +108,8 @@ class FrotzClient {
         for (const element of splitRaw) {
             let cleanedElement = CleanAnsi.replace(element);
 
-            // Skip lines we don't want to output to Discord
-            if (cleanedElement.trim() === 'Using ANSI formatting.'
-                || cleanedElement.trim() === 'Loading ' + this.gamePath + '.'
-                || cleanedElement.trim() === ('>')
-                || cleanedElement.trim().startsWith('Please enter a filename [')
-                || cleanedElement.length === 0) {
+
+            if (this.shouldSkipElement(cleanedElement)) {
                 continue;
             }
 
@@ -133,6 +139,17 @@ class FrotzClient {
             this.compiledOutput = outputArray;
             this.sendOutput();
         }
+    }
+
+    shouldSkipElement(element) {
+        const trimmedElement = element.trim();
+        return (
+            trimmedElement === 'Using ANSI formatting.' ||
+            trimmedElement === 'Loading ' + this.gamePath + '.' ||
+            trimmedElement.startsWith('Please enter a filename [') ||
+            trimmedElement === '>' ||
+            trimmedElement.length === 0
+        );
     }
 
     /**
