@@ -26,7 +26,7 @@ const invoke = (interaction) => {
     names += 'Game Active\n';
 
     values += sharedData.gameId == null ? 'No game selected\n' : sharedData.gameId + '\n';
-    values += sharedData.channel == null ? 'No channel selected\n' : sharedData.channel.name + '\n';
+    values += sharedData.thread == null ? 'No channel selected\n' : sharedData.thread.name + '\n';
     values += sharedData.listenToGame + '\n';
     values += sharedData.gameActive + '\n';
 

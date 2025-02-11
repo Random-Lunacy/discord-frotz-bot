@@ -21,7 +21,7 @@ async function invoke(interaction) {
 // Send command to dfrotz when a message is received if the game is active
 sharedData.client.on('messageCreate', (message) => {
     // Only process messages if we are actively playing and the message is sent in the game channel
-    if (sharedData.gameActive && sharedData.listenToGame && message.channel.id === sharedData.channel.id) {
+    if (sharedData.gameActive && sharedData.listenToGame && message.channel.id === sharedData.thread.id) {
 
         // Do nothing if the message is sent by the bot
         if (message.author.id == sharedData.client.user.id) {
@@ -30,19 +30,19 @@ sharedData.client.on('messageCreate', (message) => {
 
         // disable save in favor of the slash command
         if (message.content.match(/^(save)/i)) {
-            sharedData.channel.send('Use `/save` to save the game.');
+            sharedData.thread.send('Use `/save` to save the game.');
             return;
         }
 
         // disable restore in favor of the slash command
         if (message.content.match(/^(restore)/i)) {
-            sharedData.channel.send('Use `/restore` to restore a saved game.');
+            sharedData.thread.send('Use `/restore` to restore a saved game.');
             return;
         }
 
         // disable quit in favor of the slash command
         if (message.content.match(/^(quit)/i) || message.content.match(/^(q)/i)) {
-            sharedData.channel.send('Use `/quit` to exit the game.');
+            sharedData.thread.send('Use `/quit` to exit the game.');
             return;
         }
 

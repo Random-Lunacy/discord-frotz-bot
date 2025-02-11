@@ -10,6 +10,7 @@ export const sharedData = {
     client: null,
     gameId: null,
     channel: null,
+    thread: null,
     gameFolder: process.env.GAME_FOLDER,
     gameList: JSON.parse(data),
     listenToGame: false,
