@@ -23,7 +23,7 @@
     },
     "type": "module",
     "devDependencies": {
-        "eslint": "^9.20.0",
+        "eslint": "^9.22.0",
         "globals": "^15.14.0"
     }
 }
