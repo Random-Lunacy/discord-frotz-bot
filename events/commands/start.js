@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, ThreadAutoArchiveDuration, ChannelType } from 'discord.js';
 import { sharedData } from '../../sharedData.js';
 
 /**
@@ -10,7 +10,7 @@ import { sharedData } from '../../sharedData.js';
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('start')
-        .setDescription('Start a game. If not set with `/channel` the game will run in the current channel.');
+        .setDescription('Start a game. A new thread will be created in the current channel to host the game.');
 
     command.addStringOption((option) =>
         option.setName('game')
@@ -32,7 +32,7 @@ const create = () => {
  *
  * @param {object} interaction - The interaction object to be invoked.
  */
-const invoke = (interaction) => {
+const invoke = async (interaction) => {
     const game = interaction.options.getString('game') ?? 'No game provided';
 
     if (sharedData.gameActive) {
@@ -43,15 +43,28 @@ const invoke = (interaction) => {
         return;
     }
 
-    if (sharedData.channel === null) {
-        // Start the game in the current channel
-        sharedData.channel = interaction.channel;
-    }
-
     let gameObj = sharedData.gameList.games.filter(it => it.id === game)[0];
 
+    if (interaction.channel.type === ChannelType.GuildText) {
+        // Start the game in a new thread in the current channel
+        sharedData.channel = interaction.channel;
+        sharedData.thread = await interaction.channel.threads.create({
+            name: gameObj.name,
+            autoArchiveDuration: ThreadAutoArchiveDuration.OneHour
+        });
+    } else {
+        interaction.reply({
+            content: 'Unable to start game in this channel.',
+            ephemeral: true,
+        });
+        return;
+    }
+
+    // Add the user who started the game to the thread
+    await sharedData.thread.members.add(interaction.user.id);
+
     interaction.reply({
-        content: 'Starting ' + gameObj.name + ' in <#' + sharedData.channel.id + '>.',
+        content: 'Starting ' + gameObj.name + ' in the <#' + sharedData.thread.id + '> thread. Please join the thread to play.',
         ephemeral: true,
     });
 

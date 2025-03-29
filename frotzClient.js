@@ -108,17 +108,21 @@ class FrotzClient {
         for (const element of splitRaw) {
             let cleanedElement = CleanAnsi.replace(element);
 
+
             if (this.shouldSkipElement(cleanedElement)) {
                 continue;
             }
 
+            // Grab the game header line
             if (cleanedElement.trim().startsWith('[rev]')) {
-                this.gameHeader = cleanedElement
-                    .substring(5, cleanedElement.length)
-                    .trim();
+                this.gameHeader = cleanedElement.substring(5, cleanedElement.length)
+                    .trim()
+                    .replace(/\s\s+/, ' - ')
+                    .replace(/\s+/g, ' ');
                 continue;
             }
 
+            // If we've got an empty line, send the output we've collected so far
             if (cleanedElement.trim().length === 0) {
                 this.compiledOutput = outputArray;
                 this.sendOutput();
@@ -129,6 +133,7 @@ class FrotzClient {
             outputArray += cleanedElement.trimEnd() + ' \n';
         }
 
+        // Clean up and send any remaining output
         this.rawOutput = '';
         if (outputArray.length > 0) {
             this.compiledOutput = outputArray;
@@ -150,14 +155,21 @@ class FrotzClient {
     /**
      * Sends the game output to the channel.
      */
-    sendOutput() {
+    async sendOutput() {
         let final = Buffer.from(this.compiledOutput, 'utf-8').toString();
 
         // Don't send empty output
         if (final.length > 0) {
-            sharedData.channel.send(final);
+            sharedData.thread.send(final);
         }
 
+        // Update the thread name to include the game header
+        let newName = sharedData.gameList.games.filter(it => it.id === sharedData.gameId)[0].name + ' - ' + this.gameHeader;
+        if (sharedData.thread.name !== newName) {
+            await sharedData.thread.setName(newName);
+        }
+
+        // Reset the compiled output
         this.compiledOutput = '';
     }
 
