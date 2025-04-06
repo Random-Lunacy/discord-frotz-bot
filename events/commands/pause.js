@@ -1,4 +1,10 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import {
+    SlashCommandBuilder,
+    MessageFlags,
+    ButtonBuilder,
+    ButtonStyle,
+    ActionRowBuilder,
+} from 'discord.js';
 
 // Import the shared data object
 import { sharedData } from '../../sharedData.js';

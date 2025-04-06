@@ -11,7 +11,6 @@ const pauseCommandPath = path.resolve(
     __dirname,
     '../../../events/commands/pause.js'
 );
-const sharedDataPath = '../../../sharedData.js';
 
 // Mocking sharedData first
 const mockSharedData = {
@@ -24,35 +23,34 @@ const mockSharedData = {
 };
 
 // Mock dependencies with proper exports
-vi.mock('discord.js', () => {
-    return {
-        SlashCommandBuilder: vi.fn(),
-        MessageFlags: {
-            Ephemeral: 64,
-        },
-        ButtonBuilder: vi.fn().mockImplementation(() => ({
-            setCustomId: vi.fn().mockReturnThis(),
-            setLabel: vi.fn().mockReturnThis(),
-            setStyle: vi.fn().mockReturnThis(),
-        })),
-        ButtonStyle: {
-            Danger: 4,
-            Secondary: 2,
-        },
-        ActionRowBuilder: vi.fn().mockImplementation(() => ({
-            addComponents: vi.fn().mockReturnThis(),
-        })),
-    };
-});
+vi.mock('discord.js', () => ({
+    __esModule: true,
+    ButtonBuilder: vi.fn().mockImplementation(() => ({
+        setCustomId: vi.fn().mockReturnThis(),
+        setLabel: vi.fn().mockReturnThis(),
+        setStyle: vi.fn().mockReturnThis(),
+    })),
+    ButtonStyle: {
+        Danger: 4,
+        Secondary: 2,
+    },
+    SlashCommandBuilder: vi.fn(),
+    MessageFlags: {
+        Ephemeral: 64,
+    },
+    ActionRowBuilder: vi.fn().mockImplementation(() => ({
+        addComponents: vi.fn().mockReturnThis(),
+    })),
+}));
 
 // Use a relative path for the mock
-vi.mock(sharedDataPath, () => ({
+vi.mock('../../../sharedData.js', () => ({
     sharedData: mockSharedData,
 }));
 
 // Now import the modules after mocking
 const { invoke } = await import(pauseCommandPath);
-const { sharedData } = await import(sharedDataPath);
+//const { sharedData } = await import(sharedDataPath);
 
 describe('pause command', () => {
     let mockInteraction;
