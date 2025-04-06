@@ -1,0 +1,42 @@
+name: PR Check
+
+on:
+    pull_request:
+        branches: [main]
+
+jobs:
+    lint-and-test:
+        name: Lint and Test (Node.js ${{ matrix.node-version }})
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                node-version: [20, 22]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Run Linter
+              run: npm run lint
+
+            - name: Run Tests
+              if: matrix.node-version != 22 # Run without coverage for earlier node versions
+              run: npm test
+
+            - name: Run Tests with Coverage
+              if: matrix.node-version == 22 # Only run coverage for the latest node version
+              run: |
+                  npx vitest --coverage.enabled true
+
+            - name: Comment PR with coverage summary
+              if: matrix.node-version == 22 # Only report coverage for the latest node version
+              uses: davelosert/vitest-coverage-report-action@v2

@@ -6,7 +6,10 @@
     "scripts": {
         "start": "node ./frotz-bot.js",
         "lint": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js",
-        "lint-fix": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js --fix"
+        "lint-fix": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js --fix",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "coverage": "vitest run --coverage"
     },
     "author": "NepoKama",
     "license": "MIT",
@@ -23,7 +26,9 @@
     },
     "type": "module",
     "devDependencies": {
+        "@vitest/coverage-v8": "^3.1.1",
         "eslint": "^9.23.0",
-        "globals": "^16.0.0"
+        "globals": "^16.0.0",
+        "vitest": "^3.1.1"
     }
 }
