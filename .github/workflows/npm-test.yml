@@ -40,4 +40,3 @@ jobs:
             - name: Comment PR with coverage summary
               if: matrix.node-version == 22 # Only report coverage for the latest node version
               uses: davelosert/vitest-coverage-report-action@v2
-              env:
