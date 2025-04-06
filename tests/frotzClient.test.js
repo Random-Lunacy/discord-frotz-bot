@@ -31,8 +31,7 @@ vi.mock('../sharedData.js', () => ({
 
 // Import the mocks after they've been defined
 import { spawn } from 'child_process';
-import fs from 'node:fs';
-
+import fs from 'fs';
 describe('FrotzClient', () => {
     beforeEach(() => {
         // Reset mocks
