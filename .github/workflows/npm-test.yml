@@ -28,15 +28,16 @@ jobs:
             - name: Run Linter
               run: npm run lint
 
+            - name: Run Tests
+              if: matrix.node-version != 22 # Run without coverage for earlier node versions
+              run: npm test
+
             - name: Run Tests with Coverage
+              if: matrix.node-version == 22 # Only run coverage for the latest node version
               run: |
-                  npm run test -- --coverage --coverage.reporter=text-summary > coverage-${{ matrix.node-version }}.txt
-                  cat coverage-${{ matrix.node-version }}.txt
+                  npx vitest --coverage.enabled true
 
             - name: Comment PR with coverage summary
-              if: matrix.node-version == 22 # Only post one comment, from the latest node version
-              uses: thollander/actions-comment-pull-request@v3
-              with:
-                  file-path: coverage-22.txt
+              if: matrix.node-version == 22 # Only report coverage for the latest node version
+              uses: davelosert/vitest-coverage-report-action@v2
               env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
