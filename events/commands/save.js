@@ -1,4 +1,10 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, SlashCommandBuilder } from 'discord.js';
+import {
+    ActionRowBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    SlashCommandBuilder,
+    MessageFlags,
+} from 'discord.js';
 import { sharedData } from '../../sharedData.js';
 import { Logger } from '../../logger.js';
 
@@ -24,7 +30,7 @@ async function invoke(interaction) {
     if (!sharedData.gameActive) {
         interaction.reply({
             content: 'No game is currently running.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
         return;
     }
@@ -39,18 +45,19 @@ async function invoke(interaction) {
         .setLabel('Cancel')
         .setStyle(ButtonStyle.Secondary);
 
-    const row = new ActionRowBuilder()
-        .addComponents(cancel, confirm);
+    const row = new ActionRowBuilder().addComponents(cancel, confirm);
 
     const response = await interaction.reply({
         content: 'Are you sure you want save the game?',
         components: [row],
     });
 
-
-    const collectorFilter = i => i.user.id === interaction.user.id;
+    const collectorFilter = (i) => i.user.id === interaction.user.id;
     try {
-        const confirmation = await response.awaitMessageComponent({ filter: collectorFilter, time: 60_000 });
+        const confirmation = await response.awaitMessageComponent({
+            filter: collectorFilter,
+            time: 60_000,
+        });
 
         if (confirmation.customId === 'confirm') {
             let unixTime = Math.floor(Date.now() / 1000);
@@ -59,12 +66,22 @@ async function invoke(interaction) {
 
             sharedData.frotzClient.saveGame(savePath);
 
-            await confirmation.update({ content: 'Game Saved.', components: [] });
+            await confirmation.update({
+                content: 'Game Saved.',
+                components: [],
+            });
         } else if (confirmation.customId === 'cancel') {
-            await confirmation.update({ content: 'Save cancelled.', components: [] });
+            await confirmation.update({
+                content: 'Save cancelled.',
+                components: [],
+            });
         }
     } catch (e) {
-        await interaction.editReply({ content: 'Confirmation not received within 1 minute, cancelling save.', components: [] });
+        await interaction.editReply({
+            content:
+                'Confirmation not received within 1 minute, cancelling save.',
+            components: [],
+        });
     }
 }
 

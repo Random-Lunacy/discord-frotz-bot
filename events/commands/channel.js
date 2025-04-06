@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, ChannelType, MessageFlags } from 'discord.js';
 
 // Import the shared data object
 import { sharedData } from '../../sharedData.js';
@@ -13,10 +13,14 @@ const create = () => {
         .setName('channel')
         .setDescription('Set the  channel where the game will be played.')
         .addChannelOption((option) =>
-            option.setName('channel')
-                .setDescription('Channel you want to use for playing the game (defaults to current channel).')
+            option
+                .setName('channel')
+                .setDescription(
+                    'Channel you want to use for playing the game (defaults to current channel).'
+                )
                 .setRequired(false)
-                .addChannelTypes(ChannelType.GuildText));
+                .addChannelTypes(ChannelType.GuildText)
+        );
 
     return command.toJSON();
 };
@@ -34,7 +38,7 @@ const invoke = (interaction) => {
 
     interaction.reply({
         content: 'Game channel set to <#' + sharedData.channel.id + '>.',
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
     });
 };
 

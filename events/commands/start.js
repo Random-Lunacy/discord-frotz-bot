@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { sharedData } from '../../sharedData.js';
 
 /**
@@ -10,22 +10,27 @@ import { sharedData } from '../../sharedData.js';
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('start')
-        .setDescription('Start a game. If not set with `/channel` the game will run in the current channel.');
+        .setDescription(
+            'Start a game. If not set with `/channel` the game will run in the current channel.'
+        );
 
     command.addStringOption((option) =>
-        option.setName('game')
+        option
+            .setName('game')
             .setDescription('Game to start.')
-            .setRequired(true));
+            .setRequired(true)
+    );
 
     let x, current;
     for (x = 0; x < sharedData.gameList.games.length; x++) {
         current = sharedData.gameList.games[x];
-        command.options[0].addChoices(JSON.parse(`{"name": "${current.name}", "value": "${current.id}"}`));
+        command.options[0].addChoices(
+            JSON.parse(`{"name": "${current.name}", "value": "${current.id}"}`)
+        );
     }
 
     return command.toJSON();
 };
-
 
 /**
  * Invokes the specified interaction.
@@ -37,8 +42,9 @@ const invoke = (interaction) => {
 
     if (sharedData.gameActive) {
         interaction.reply({
-            content: 'A game is already running. You must stop the current game before starting a new one.',
-            ephemeral: true,
+            content:
+                'A game is already running. You must stop the current game before starting a new one.',
+            flags: MessageFlags.Ephemeral,
         });
         return;
     }
@@ -48,17 +54,22 @@ const invoke = (interaction) => {
         sharedData.channel = interaction.channel;
     }
 
-    let gameObj = sharedData.gameList.games.filter(it => it.id === game)[0];
+    let gameObj = sharedData.gameList.games.filter((it) => it.id === game)[0];
 
     interaction.reply({
-        content: 'Starting ' + gameObj.name + ' in <#' + sharedData.channel.id + '>.',
-        ephemeral: true,
+        content:
+            'Starting ' +
+            gameObj.name +
+            ' in <#' +
+            sharedData.channel.id +
+            '>.',
+        flags: MessageFlags.Ephemeral,
     });
 
     if (!sharedData.frotzClient.startGame(gameObj.file)) {
         interaction.reply({
             content: sharedData.frotzClient.lastError.message,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
         return;
     }

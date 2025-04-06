@@ -18,7 +18,7 @@ To get a local copy up and running follow these simple example steps.
 
 -   [Node.JS](https://nodejs.org/)
 
-    Verify you have Node.JS v18 or later installed:
+    Verify you have Node.js 22.12.0 or later installed:
 
     ```sh
     node --version

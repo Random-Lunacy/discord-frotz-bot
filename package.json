@@ -12,7 +12,7 @@
     "license": "MIT",
     "dependencies": {
         "dateformat": "^5.0.3",
-        "discord.js": "^14.17.3",
+        "discord.js": "^14.18.0",
         "dotenv": "^16.4.7",
         "glob": "^11.0.1",
         "winston": "^3.17.0"
