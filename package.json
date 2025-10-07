@@ -16,7 +16,7 @@
     "dependencies": {
         "dateformat": "^5.0.3",
         "discord.js": "^14.22.1",
-        "dotenv": "^17.2.2",
+        "dotenv": "^17.2.3",
         "glob": "^11.0.3",
         "winston": "^3.17.0"
     },
