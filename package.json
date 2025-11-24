@@ -17,7 +17,7 @@
         "dateformat": "^5.0.3",
         "discord.js": "^14.24.0",
         "dotenv": "^17.2.3",
-        "glob": "^11.0.3",
+        "glob": "^13.0.0",
         "winston": "^3.18.3"
     },
     "imports": {
