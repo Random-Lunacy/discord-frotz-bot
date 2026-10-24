@@ -3,11 +3,16 @@ import { DiscordInputProcessor } from '../discordInputProcessor.js';
 
 describe('DiscordInputProcessor', () => {
     let screen;
+    let prompts;
     let input;
 
     beforeEach(() => {
         screen = { flush: vi.fn() };
-        input = new DiscordInputProcessor(screen);
+        prompts = {
+            save: vi.fn().mockResolvedValue('/games/new-save.qzl'),
+            restore: vi.fn().mockResolvedValue('/games/old-save.qzl'),
+        };
+        input = new DiscordInputProcessor(screen, prompts);
         input.machine = {};
         input.onInputComplete = vi.fn();
         input.onKeyPress = vi.fn();
@@ -41,10 +46,24 @@ describe('DiscordInputProcessor', () => {
         expect(input.onKeyPress).toHaveBeenCalledWith(input.machine, 'y');
     });
 
-    it('should only use a queued filename once', async () => {
+    it('should use a queued filename once, then ask the player', async () => {
         input.setNextFilename('/games/zork-1.qzl');
 
-        expect(await input.promptForFilename()).toBe('/games/zork-1.qzl');
-        expect(await input.promptForFilename()).toBe('');
+        expect(await input.promptForFilename({}, 'restore')).toBe(
+            '/games/zork-1.qzl'
+        );
+        expect(prompts.restore).not.toHaveBeenCalled();
+
+        expect(await input.promptForFilename({}, 'restore')).toBe(
+            '/games/old-save.qzl'
+        );
+        expect(prompts.restore).toHaveBeenCalledTimes(1);
+    });
+
+    it('should ask the player for a name when the game saves', async () => {
+        expect(await input.promptForFilename({}, 'save')).toBe(
+            '/games/new-save.qzl'
+        );
+        expect(prompts.save).toHaveBeenCalled();
     });
 });

@@ -96,14 +96,26 @@ The bot is controlled with slash commands. Only one game can run at a time.
 | `/games`   | List the available games.                                                                         |
 | `/channel` | Choose the channel the game is played in (defaults to the current channel).                       |
 | `/start`   | Start a game.                                                                                     |
-| `/save`    | Save the game. Saves are stored in the games folder as `<game>-<time>-<user>.qzl`.                |
-| `/restore` | Restore the latest save, or choose a save. Can also start the game if none is running.            |
+| `/restore` | Choose a save to restore. Can also start the game from a save if none is running.                 |
 | `/pause`   | Pause or resume the bot's listening to the channel.                                               |
 | `/status`  | Show the bot's current state.                                                                     |
-| `/quit`    | Quit the game. Progress since the last save is lost.                                              |
+| `/quit`    | Force the game to stop, for example if it is stuck. Progress since the last save is lost.         |
 
-While a game is running, every message in the game channel is sent to the game as a command. `save`, `restore` and `quit`
-typed as messages are redirected to the slash commands above.
+While a game is running, every message in the game channel is sent to the game as a command, so the game's own
+`save`, `restore`, `undo` and `quit` commands all work.
+
+-   **Saving:** type `save`. The bot asks the player who typed it to name the save. Reply with a name, `skip` to use
+    the default name, or `cancel` to cancel. If there's no reply within 60 seconds the default name is used. Only that
+    player's reply is used; other messages are ignored until they answer or the time runs out. Anyone in the channel
+    can save. The default name is `<user>_<date>_<time>`, which you can change with `DEFAULT_SAVE_NAME` in `.env`
+    using the placeholders `{game}`, `{user}`, `{channel}`, `{date}` and `{time}`.
+-   **Restoring:** type `restore`. The bot lists the most recent saves for the running game, and only the player who
+    typed `restore` can choose one (reply with a number, `latest` or `cancel`).
+-   **Quitting:** type `quit` and answer the game's own confirmation. The bot notices when the game ends.
+
+Saves are kept in the games folder and named `<game>-<channel>-<user>-<time>[-<name>].qzl`, with the Discord channel
+and user IDs, the Unix time of the save, and the optional name the player gave it. Older saves named
+`<game>-<time>-<user>.qzl` can still be restored.
 
 For games that show a status line (Z-machine versions 1-3), the location, score and moves are shown above each reply.
 Saves use the standard Quetzal (`.qzl`) format, so saves made by other interpreters, including Frotz, can be restored.

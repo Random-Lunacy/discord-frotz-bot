@@ -13,14 +13,27 @@ import {
 } from 'rezrov-zmachine';
 import { DiscordScreen } from './discordScreen.js';
 import { DiscordInputProcessor } from './discordInputProcessor.js';
+import {
+    buildSaveName,
+    DEFAULT_LABEL_TEMPLATE,
+    expandLabelTemplate,
+    listSaves,
+    sanitizeLabel,
+} from './saves.js';
 
 ZLogger.setLevel(LogLevel.WARN);
+
+const MAX_RESTORE_CHOICES = 10;
 
 class ZMachineClient extends EventEmitter {
     machine = null;
     screen = null;
     input = null;
     gamePath = '';
+    lastUserId = null;
+    pendingPrompt = null;
+
+    promptTimeoutMs = 60_000;
 
     lastError = null;
 
@@ -69,7 +82,10 @@ class ZMachineClient extends EventEmitter {
                 this.sendOutput(text, status)
             );
             this.screen.onQuit = () => this.handleGameEnd();
-            this.input = new DiscordInputProcessor(this.screen);
+            this.input = new DiscordInputProcessor(this.screen, {
+                save: () => this.promptSaveName(),
+                restore: () => this.promptRestoreName(),
+            });
 
             // Quetzal (.qzl) is the same save format dfrotz writes
             this.machine = new ZMachine(
@@ -103,7 +119,20 @@ class ZMachineClient extends EventEmitter {
      * Called when the game itself ends (for example, the player quits in-game).
      */
     handleGameEnd() {
+        const name =
+            sharedData.gameList?.games.find((it) => it.id === sharedData.gameId)
+                ?.name ?? 'The game';
+
+        Logger.log({
+            level: 'info',
+            message: `Game ended: ${sharedData.gameId}`,
+        });
+
+        this.cancelPrompt();
         this.machine = null;
+        this.say(
+            `**${name}** has ended. Use \`/start\` to play again or \`/restore\` to continue from a save.`
+        );
         this.emit('end');
     }
 
@@ -220,22 +249,51 @@ class ZMachineClient extends EventEmitter {
     }
 
     /**
-     * Send the input message to the game.
+     * Handle a Discord message sent in the game channel. If the game has asked a player a
+     * question (naming a save, choosing a save to restore), only that player's next message
+     * is the answer; otherwise the message is a command for the game.
      *
-     * @param {string} message - The input message to be processed.
-     * @return {boolean} False if the game is not waiting for input.
+     * @param {object} message - The Discord message.
+     * @return {boolean} False if the game could not use the message.
      */
-    processInput(message) {
+    handleMessage(message) {
         if (!this.machine) {
             return false;
         }
-        return this.input.submit(message);
+
+        if (this.pendingPrompt) {
+            if (message.author.id === this.pendingPrompt.userId) {
+                this.pendingPrompt.answer(message.content);
+            }
+            return true;
+        }
+
+        return this.processInput(message.content, message.author.id);
+    }
+
+    /**
+     * Send the input message to the game.
+     *
+     * @param {string} message - The input message to be processed.
+     * @param {string} [userId] - The user who sent it, used to name saves and ask them questions.
+     * @return {boolean} False if the game is not waiting for input.
+     */
+    processInput(message, userId = null) {
+        if (!this.machine) {
+            return false;
+        }
+        const accepted = this.input.submit(message);
+        if (accepted) {
+            this.lastUserId = userId;
+        }
+        return accepted;
     }
 
     /**
      * Stops the game and releases the interpreter.
      */
     stopGame() {
+        this.cancelPrompt();
         if (this.machine) {
             this.input.cancelInput(this.machine);
             this.machine.quit();
@@ -244,17 +302,154 @@ class ZMachineClient extends EventEmitter {
     }
 
     /**
-     * Save the game at the specified path.
+     * Send a message to the game channel without pinging anyone it mentions.
      *
-     * @param {string} savePath - The path where the game should be saved.
+     * @param {string} content - The message.
      */
-    saveGame(savePath) {
-        this.input.setNextFilename(savePath);
-        this.input.submit('save');
+    say(content) {
+        sharedData.channel
+            .send({ content, allowedMentions: { parse: [] } })
+            .catch((error) => {
+                Logger.log({
+                    level: 'error',
+                    message: `Error sending message to Discord: ${error.message}`,
+                    stack: error.stack,
+                });
+            });
     }
 
     /**
-     * Restore the game from the specified path.
+     * Wait for the next message from a player.
+     *
+     * @param {string} userId - The only user whose message counts as an answer.
+     * @return {Promise<string|null>} The text of the answer, or null if none arrived in time.
+     */
+    askUser(userId) {
+        this.cancelPrompt();
+        return new Promise((resolve) => {
+            const finish = (answer) => {
+                clearTimeout(timer);
+                this.pendingPrompt = null;
+                resolve(answer);
+            };
+            const timer = setTimeout(() => finish(null), this.promptTimeoutMs);
+            this.pendingPrompt = {
+                userId,
+                answer: (text) => finish(text.trim()),
+                cancel: () => finish(null),
+            };
+        });
+    }
+
+    cancelPrompt() {
+        this.pendingPrompt?.cancel();
+    }
+
+    /**
+     * Ask the player who typed `save` what to call the save, and work out where to put it.
+     *
+     * @return {Promise<string>} The path to save to, or '' to cancel the save.
+     */
+    async promptSaveName() {
+        const userId = this.lastUserId;
+        const defaultLabel = this.defaultLabel(userId);
+        this.say(
+            `<@${userId}> Name this save, reply \`skip\` to name it \`${defaultLabel}\`, ` +
+                'or reply `cancel` to cancel. Only your reply will be used.'
+        );
+
+        const answer = await this.askUser(userId);
+        if (answer !== null && answer.toLowerCase() === 'cancel') {
+            this.say('Save cancelled.');
+            return '';
+        }
+
+        let label = defaultLabel;
+        if (answer === null) {
+            this.say('No reply received, using the default name.');
+        } else if (answer.toLowerCase() !== 'skip') {
+            label = sanitizeLabel(answer);
+            if (!label) {
+                label = defaultLabel;
+                this.say('That name has no usable letters or numbers, using the default name.');
+            }
+        }
+
+        const name = buildSaveName({
+            gameId: sharedData.gameId,
+            channelId: sharedData.channel.id,
+            userId,
+            time: Math.floor(Date.now() / 1000),
+            label,
+        });
+        this.say(`Saving as \`${name}\`.`);
+        return `${sharedData.gameFolder}/${name}`;
+    }
+
+    /**
+     * The name a save gets when the player doesn't give one, from DEFAULT_SAVE_NAME if set.
+     *
+     * @param {string} userId - The player saving.
+     * @return {string} The label.
+     */
+    defaultLabel(userId) {
+        const user = sharedData.client?.users?.cache?.get(userId);
+        const label = expandLabelTemplate(
+            process.env.DEFAULT_SAVE_NAME || DEFAULT_LABEL_TEMPLATE,
+            {
+                game: sharedData.gameId,
+                user: user?.username ?? 'player',
+                channel: sharedData.channel?.name,
+            }
+        );
+        return label || expandLabelTemplate(DEFAULT_LABEL_TEMPLATE, { user: 'player' });
+    }
+
+    /**
+     * Ask the player who typed `restore` which save of this game to restore.
+     *
+     * @return {Promise<string>} The path to restore from, or '' to cancel the restore.
+     */
+    async promptRestoreName() {
+        const userId = this.lastUserId;
+        const saves = listSaves(sharedData.gameFolder, sharedData.gameId).slice(
+            0,
+            MAX_RESTORE_CHOICES
+        );
+
+        if (saves.length === 0) {
+            this.say('There are no saves for this game.');
+            return '';
+        }
+
+        const lines = saves.map((save, index) => {
+            const label = save.label ? ` "${save.label}"` : '';
+            return `${index + 1}.${label} saved by <@${save.userId}> <t:${save.time}:f>`;
+        });
+        this.say(
+            `<@${userId}> Which save do you want to restore?\n${lines.join('\n')}\n` +
+                'Reply with a number, `latest`, or `cancel`. Only your reply will be used.'
+        );
+
+        const answer = await this.askUser(userId);
+        let chosen = null;
+        if (answer !== null) {
+            if (answer.toLowerCase() === 'latest') {
+                chosen = saves[0];
+            } else if (/^\d+$/.test(answer)) {
+                chosen = saves[parseInt(answer, 10) - 1] ?? null;
+            }
+        }
+
+        if (!chosen) {
+            this.say('Restore cancelled.');
+            return '';
+        }
+        return chosen.path;
+    }
+
+    /**
+     * Restore the game from the specified path (used by the /restore command).
      *
      * @param {string} savePath - The path to the save file to be restored.
      */
