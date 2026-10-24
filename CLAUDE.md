@@ -45,4 +45,4 @@ rezrov's built `dist`, so rebuild it after changing rezrov.
     arrow-function mocks). `tests/commands.test.js` builds every command with the real builders to catch invalid
     definitions, so keep that passing when adding commands.
 -   Never send anything to a thread while `client.silent` is true; the thread may be archived, and sending would reopen it.
--   `games/games.json`, game files and saves are gitignored (a few old saves were committed before that rule).
+-   `games/games.json`, game files and saves (`*.qzl`) are gitignored; never commit them.
