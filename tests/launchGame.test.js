@@ -288,7 +288,7 @@ describe('launchGame', () => {
 
         const result = await launchGame(interaction, game);
 
-        expect(result.error).toContain('already running here');
+        expect(result.error).toContain('already running in this thread');
         expect(mockSessions.create).not.toHaveBeenCalled();
     });
 

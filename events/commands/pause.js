@@ -18,7 +18,7 @@ const create = () => {
     const command = new SlashCommandBuilder()
         .setName('pause')
         .setDescription(
-            'Pause or unpause the game in this channel (toggles whether the bot will listen to messages).'
+            'Pause or unpause the game in this thread (toggles whether the bot listens to messages).'
         );
 
     return command.toJSON();
@@ -40,7 +40,7 @@ async function invoke(interaction) {
     }
     let confirmButtonText = 'Pause Game';
     let confirmMessage =
-        'Are you sure you want to pause the game? The game will stop listening to messages while paused.';
+        'Are you sure you want to pause the game? The game will stop listening to messages while paused, but it is still saved and shut down if left idle.';
     let responseMessage = 'Game paused.';
     if (session.paused) {
         confirmButtonText = 'Unpause Game';

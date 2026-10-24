@@ -27,13 +27,13 @@ const create = () => {
     const command = new SlashCommandBuilder()
         .setName('restore')
         .setDescription(
-            'Restore a saved game. If no game is running, you can select which game to start.'
+            'Restore a save. In a thread it restores that thread\'s game; in a channel you pick the game.'
         )
         .addStringOption((option) =>
             option
                 .setName('game')
                 .setDescription(
-                    'Specific game to restore a save for (optional)'
+                    'Game to restore (default: the game for this thread)'
                 )
                 .setRequired(false)
         );

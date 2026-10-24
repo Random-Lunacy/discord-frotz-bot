@@ -100,7 +100,7 @@ export async function launchGame(interaction, game, { reuse = false, threadId } 
     let channel = interaction.channel;
 
     if (sessions.get(channel.id)) {
-        return { error: 'A game is already running here. Start another game in a different channel, or ask an admin to `/quit` this one.' };
+        return { error: 'A game is already running in this thread. Use `/start` in a text channel to play in a thread of your own, or ask an admin to `/quit` this one.' };
     }
 
     if (sessions.isFull()) {
