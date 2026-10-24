@@ -11,7 +11,7 @@ jobs:
 
         strategy:
             matrix:
-                node-version: [20, 22]
+                node-version: [22, 24]
 
         steps:
             - name: Checkout code
@@ -29,14 +29,14 @@ jobs:
               run: npm run lint
 
             - name: Run Tests
-              if: matrix.node-version != 22 # Run without coverage for earlier node versions
+              if: matrix.node-version != 24 # Run without coverage for earlier node versions
               run: npm test
 
             - name: Run Tests with Coverage
-              if: matrix.node-version == 22 # Only run coverage for the latest node version
+              if: matrix.node-version == 24 # Only run coverage for the latest node version
               run: |
                   npx vitest --coverage.enabled true
 
             - name: Comment PR with coverage summary
-              if: matrix.node-version == 22 # Only report coverage for the latest node version
+              if: matrix.node-version == 24 # Only report coverage for the latest node version
               uses: davelosert/vitest-coverage-report-action@v2

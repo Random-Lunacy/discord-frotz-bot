@@ -16,7 +16,7 @@
     "dependencies": {
         "dateformat": "^5.0.3",
         "discord.js": "^14.25.1",
-        "dotenv": "^17.2.3",
+        "dotenv": "^18.0.9",
         "glob": "^13.0.0",
         "winston": "^3.18.3"
     },
@@ -26,9 +26,12 @@
     },
     "type": "module",
     "devDependencies": {
-        "@vitest/coverage-v8": "^4.1.12",
-        "eslint": "^9.39.1",
-        "globals": "^16.4.0",
-        "vitest": "^4.1.12"
+        "@vitest/coverage-v8": "^5.0.5",
+        "eslint": "^10.13.0",
+        "globals": "^17.13.0",
+        "vitest": "^5.0.5"
+    },
+    "engines": {
+        "node": ">=22.12.0"
     }
 }
