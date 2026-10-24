@@ -119,8 +119,20 @@ class ZMachineClient extends EventEmitter {
      * Called when the game itself ends (for example, the player quits in-game).
      */
     handleGameEnd() {
+        const name =
+            sharedData.gameList?.games.find((it) => it.id === sharedData.gameId)
+                ?.name ?? 'The game';
+
+        Logger.log({
+            level: 'info',
+            message: `Game ended: ${sharedData.gameId}`,
+        });
+
         this.cancelPrompt();
         this.machine = null;
+        this.say(
+            `**${name}** has ended. Use \`/start\` to play again or \`/restore\` to continue from a save.`
+        );
         this.emit('end');
     }
 

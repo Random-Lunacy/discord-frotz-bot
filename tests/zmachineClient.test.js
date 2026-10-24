@@ -104,6 +104,20 @@ describe('ZMachineClient', () => {
             );
         });
 
+        it('should not announce the end when the game is force stopped', async () => {
+            const onEnd = vi.fn();
+            GameClient.on('end', onEnd);
+            GameClient.startGame('zork-i.z3');
+            await tick();
+            sharedData.channel.send.mockClear();
+
+            GameClient.stopGame();
+            await tick();
+
+            expect(onEnd).not.toHaveBeenCalled();
+            expect(sentText().join('\n')).not.toContain('has ended');
+        });
+
         it('should emit end when the game quits', async () => {
             const onEnd = vi.fn();
             GameClient.on('end', onEnd);
@@ -116,6 +130,8 @@ describe('ZMachineClient', () => {
             await tick();
 
             expect(onEnd).toHaveBeenCalled();
+            expect(sentText().join('\n')).toContain('has ended');
+            expect(GameClient.processInput('look')).toBe(false);
         });
 
         describe('saving and restoring in the game', () => {
