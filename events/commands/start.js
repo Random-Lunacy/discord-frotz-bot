@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { sharedData } from '../../sharedData.js';
+import { launchGame } from '../../launchGame.js';
 
 /**
  * Creates a new Slash Command for starting a game.
@@ -10,9 +11,7 @@ import { sharedData } from '../../sharedData.js';
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('start')
-        .setDescription(
-            'Start a game. If not set with `/channel` the game will run in the current channel.'
-        );
+        .setDescription('Start a game in your own thread for it (made if needed), or in this thread.');
 
     command.addStringOption((option) =>
         option
@@ -37,46 +36,30 @@ const create = () => {
  *
  * @param {object} interaction - The interaction object to be invoked.
  */
-const invoke = (interaction) => {
-    const game = interaction.options.getString('game') ?? 'No game provided';
+const invoke = async (interaction) => {
+    const game = interaction.options.getString('game');
+    const gameObj = sharedData.gameList.games.find((it) => it.id === game);
 
-    if (sharedData.gameActive) {
-        interaction.reply({
-            content:
-                'A game is already running. You must stop the current game before starting a new one.',
+    if (!gameObj) {
+        await interaction.reply({
+            content: `Could not find a game with ID "${game}".`,
             flags: MessageFlags.Ephemeral,
         });
         return;
     }
 
-    if (sharedData.channel === null) {
-        // Start the game in the current channel
-        sharedData.channel = interaction.channel;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    // Play in the player's existing thread for this game, if they have one, rather than making another
+    const result = await launchGame(interaction, gameObj, { reuse: true });
+    if (result.error) {
+        await interaction.editReply({ content: result.error });
+        return;
     }
 
-    let gameObj = sharedData.gameList.games.filter((it) => it.id === game)[0];
-
-    interaction.reply({
-        content:
-            'Starting ' +
-            gameObj.name +
-            ' in <#' +
-            sharedData.channel.id +
-            '>.',
-        flags: MessageFlags.Ephemeral,
+    await interaction.editReply({
+        content: `Starting ${gameObj.name} in <#${result.session.channel.id}>.`,
     });
-
-    if (!sharedData.gameClient.startGame(gameObj.file)) {
-        interaction.followUp({
-            content: sharedData.gameClient.lastError.message,
-            flags: MessageFlags.Ephemeral,
-        });
-        return;
-    }
-
-    sharedData.gameId = game;
-    sharedData.gameActive = true;
-    sharedData.listenToGame = true;
 };
 
 export { create, invoke };

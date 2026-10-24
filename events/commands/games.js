@@ -22,7 +22,7 @@ const create = () => {
 const invoke = (interaction) => {
     let embed = new EmbedBuilder()
         .setTitle('Available Games')
-        .setDescription('Start a game with `/start [game]`. Only one game may be running at a time.')
+        .setDescription('Start a game with `/start [game]`. Each game runs in its own thread, and several can run at once.')
         .setColor(0x0099ff);
 
     let x, current, names = '';

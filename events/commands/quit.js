@@ -2,13 +2,15 @@ import {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
+    PermissionFlagsBits,
     SlashCommandBuilder,
     MessageFlags,
 } from 'discord.js';
-import { sharedData } from '../../sharedData.js';
+import { sessions } from '../../sessions.js';
+import { isAdmin } from '../../permissions.js';
 
 /**
- * Creates a new Slash Command for quitting the game.
+ * Creates a new Slash Command for force-quitting the game in this channel. Admins only.
  *
  * @return {Object} The JSON representation of the created command.
  */
@@ -16,8 +18,9 @@ const create = () => {
     const command = new SlashCommandBuilder()
         .setName('quit')
         .setDescription(
-            'Quits the game. All progress since the game was last saved will be lost.'
-        );
+            'Admins only: force the game in this channel or thread to stop. Progress since the last save is lost.'
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
     return command.toJSON();
 };
@@ -28,17 +31,24 @@ const create = () => {
  * @param {Object} interaction - The interaction object.
  */
 async function invoke(interaction) {
-    if (!sharedData.gameActive) {
+    if (!isAdmin(interaction)) {
         interaction.reply({
-            content: 'No game is currently running.',
+            content: 'Only server admins can force a game to quit. Type `quit` in the game to leave it yourself.',
             flags: MessageFlags.Ephemeral,
         });
         return;
     }
 
-    let gameName = sharedData.gameList.games.filter(
-        (it) => it.id === sharedData.gameId
-    )[0].name;
+    const session = sessions.get(interaction.channel.id);
+    if (!session) {
+        interaction.reply({
+            content: 'No game is currently running here.',
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
+
+    const gameName = session.game.name;
 
     const confirm = new ButtonBuilder()
         .setCustomId('confirm')
@@ -68,10 +78,7 @@ async function invoke(interaction) {
         });
 
         if (confirmation.customId === 'confirm') {
-            sharedData.playingGame = false;
-            sharedData.gameActive = false;
-            sharedData.gameId = null;
-            sharedData.gameClient.stopGame();
+            sessions.stop(interaction.channel.id);
 
             await confirmation.update({
                 content: 'Quitting ' + gameName + '.',

@@ -45,8 +45,9 @@ to your Discord server.
 Once you've created your bot account in Discord you will need to enable the **Message Content Intent** under **Bot** ->
 **Privileged Gateway Intents**.
 
-When building a URL to invite the bot account to a server select **Read Messages/View Channels** and **Send Messages**
-under **Bot Permissions**.
+When building a URL to invite the bot account to a server select **Read Messages/View Channels**, **Send Messages**,
+**Create Public Threads** and **Send Messages in Threads** under **Bot Permissions**. Each game is played in its own
+thread, so the bot needs to be able to create them in the channels where people start games.
 
 Make note of your bot’s token, you will need to add it to the configuration for `discord-frotz-bot`. Note that this
 token is essentially your bot’s password. You should never commit this token to the repository or share this token with
@@ -89,27 +90,43 @@ anyone else.
 
 ## Usage
 
-The bot is controlled with slash commands. Only one game can run at a time.
+The bot is controlled with slash commands. Each game is played in its own thread, and several games can run at once
+(up to 10 by default; set `MAX_GAMES` in `.env` to change that).
 
-| Command    | Description                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| `/games`   | List the available games.                                                                         |
-| `/channel` | Choose the channel the game is played in (defaults to the current channel).                       |
-| `/start`   | Start a game.                                                                                     |
-| `/restore` | Choose a save to restore. Can also start the game from a save if none is running.                 |
-| `/pause`   | Pause or resume the bot's listening to the channel.                                               |
-| `/status`  | Show the bot's current state.                                                                     |
-| `/quit`    | Force the game to stop, for example if it is stuck. Progress since the last save is lost.         |
+| Command            | Who          | Description                                                                                                                 |
+| ------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `/games`           | Anyone       | List the available games.                                                                                                   |
+| `/start`           | Anyone       | Start a game. In a text channel it is played in your existing thread for that game (reopened if archived), or a new thread; used inside a thread, the game is played there. |
+| `/restore`         | Anyone       | Restore a game. In a thread with a game running, pick a save to restore into it. In a thread with no game running, restore the game the thread was for (the game of its saves, else the game in its name), using the newest save made in that thread. In a text channel, pick a game and its newest save is restored in your thread for it. |
+| `/pause`           | Anyone       | Pause or resume the game in this thread (the bot stops or starts listening to messages).                                    |
+| `/status`          | Anyone       | Show the game in this thread. Server admins also see every game in progress, with who started it, when, and when it was last played. |
+| `/status all:True` | Server admin | Show only the list of every game in progress.                                                                               |
+| `/quit`            | Server admin | Force the game in this thread to stop, for example if it is stuck. Progress since the last save is lost.                    |
 
-While a game is running, every message in the game channel is sent to the game as a command, so the game's own
+Server admins are users with the **Manage Server** permission. Players leave a game themselves by typing `quit` in it.
+A game is stopped if its thread is deleted, and games do not survive a restart of the bot; saves do.
+Threads are matched by name, `<game> - <player>`, so each player gets their own thread for a game and `/start` and
+`/restore` use it again instead of making another.
+
+Discord archives a thread after a period with no messages in it, whether or not the game is paused. The bot's threads
+last 7 days by default; set `THREAD_LIFETIME_DAYS` in `.env` to `1`, `3` or `7` to change that. When a thread is
+archived (by Discord or by someone closing it) the bot saves the game first, quietly, as an `autosave` that appears in
+the `restore` list, and then stops it. If a game cannot be saved (for example it is not responding), it is stopped without a
+save, so save before leaving a game for a long time.
+
+A game that goes without a player message (or a `/pause` or `/restore`) for `IDLE_TIMEOUT_MINUTES` (60 by default, `0`
+to turn it off) is saved as an `autosave` and shut down to free resources. The thread stays open and the bot says so
+there; use `/restore` in the thread to resume from the autosave. A paused game counts as idle.
+
+While a game is running, every message in its thread is sent to the game as a command, so the game's own
 `save`, `restore`, `undo` and `quit` commands all work.
 
 -   **Saving:** type `save`. The bot asks the player who typed it to name the save. Reply with a name, `skip` to use
     the default name, or `cancel` to cancel. If there's no reply within 60 seconds the default name is used. Only that
-    player's reply is used; other messages are ignored until they answer or the time runs out. Anyone in the channel
+    player's reply is used; other messages are ignored until they answer or the time runs out. Anyone in the thread
     can save. The default name is `<user>_<date>_<time>`, which you can change with `DEFAULT_SAVE_NAME` in `.env`
     using the placeholders `{game}`, `{user}`, `{channel}`, `{date}` and `{time}`.
--   **Restoring:** type `restore`. The bot lists the most recent saves for the running game, and only the player who
+-   **Restoring:** type `restore`. The bot lists the most recent saves for the running game, those made in this thread first, and only the player who
     typed `restore` can choose one (reply with a number, `latest` or `cancel`).
 -   **Quitting:** type `quit` and answer the game's own confirmation. The bot notices when the game ends.
 

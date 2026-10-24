@@ -1,4 +1,5 @@
 import { sharedData } from '../sharedData.js';
+import { sessions } from '../sessions.js';
 import { Logger } from '../logger.js';
 
 
@@ -18,18 +19,22 @@ async function invoke(interaction) {
         (await import(`#commands/${interaction.commandName}`)).invoke(interaction);
 }
 
-// Send messages to the game when a message is received if the game is active
+// Send messages to the game in the channel or thread they were sent in, if there is one
 sharedData.client.on('messageCreate', (message) => {
-    // Only process messages if we are actively playing and the message is sent in the game channel
-    if (sharedData.gameActive && sharedData.listenToGame && message.channel.id === sharedData.channel.id) {
-
-        // Do nothing if the message is sent by the bot
-        if (message.author.id == sharedData.client.user.id) {
-            return;
-        }
-
-        sharedData.gameClient.handleMessage(message);
+    // Do nothing if the message is sent by the bot
+    if (message.author.id == sharedData.client.user.id) {
+        return;
     }
+
+    const session = sessions.get(message.channel.id);
+
+    // Only process messages if a game is running here and it isn't paused
+    if (!session || session.paused) {
+        return;
+    }
+
+    session.touch();
+    session.client.handleMessage(message);
 });
 
 export { once, name, invoke };

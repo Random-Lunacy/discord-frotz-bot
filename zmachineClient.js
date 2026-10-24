@@ -18,14 +18,19 @@ import {
     DEFAULT_LABEL_TEMPLATE,
     expandLabelTemplate,
     listSaves,
+    preferChannel,
     sanitizeLabel,
 } from './saves.js';
 
 ZLogger.setLevel(LogLevel.WARN);
 
 const MAX_RESTORE_CHOICES = 10;
+const AUTOSAVE_LABEL = 'autosave';
 
-class ZMachineClient extends EventEmitter {
+/**
+ * Plays one game in one Discord channel (or thread). Each running game has its own client.
+ */
+export class ZMachineClient extends EventEmitter {
     machine = null;
     screen = null;
     input = null;
@@ -36,6 +41,19 @@ class ZMachineClient extends EventEmitter {
     promptTimeoutMs = 60_000;
 
     lastError = null;
+
+    /**
+     * @param {object} options
+     * @param {object} options.channel - The Discord channel or thread the game is played in.
+     * @param {string} options.gameId - The game's ID from games.json.
+     * @param {string} [options.gameName] - The game's display name.
+     */
+    constructor({ channel, gameId, gameName }) {
+        super();
+        this.channel = channel;
+        this.gameId = gameId;
+        this.gameName = gameName ?? gameId;
+    }
 
     /**
      * Verifies if the game file exists at the given file path.
@@ -116,16 +134,31 @@ class ZMachineClient extends EventEmitter {
     }
 
     /**
+     * Wait for the game to reach its first prompt.
+     *
+     * @param {number} [timeoutMs] - How long to wait.
+     * @return {Promise<boolean>} False if the game was not ready in time.
+     */
+    async whenReady(timeoutMs = 5000) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            if (this.input?.waiting) {
+                return true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        return false;
+    }
+
+    /**
      * Called when the game itself ends (for example, the player quits in-game).
      */
     handleGameEnd() {
-        const name =
-            sharedData.gameList?.games.find((it) => it.id === sharedData.gameId)
-                ?.name ?? 'The game';
+        const name = this.gameName ?? 'The game';
 
         Logger.log({
             level: 'info',
-            message: `Game ended: ${sharedData.gameId}`,
+            message: `Game ended: ${this.gameId} in ${this.channel.id}`,
         });
 
         this.cancelPrompt();
@@ -144,6 +177,10 @@ class ZMachineClient extends EventEmitter {
      * @param {string|null} status - The status line (V1-V3 games), if any.
      */
     sendOutput(text, status) {
+        if (this.silent) {
+            return;
+        }
+
         let final = status ? `-# ${status}\n${text}` : text;
 
         // Don't send empty output
@@ -154,7 +191,7 @@ class ZMachineClient extends EventEmitter {
         // Check if the message is too long for Discord (2000 char limit)
         if (final.length <= 1900) {
             // Short enough to send as a single message
-            sharedData.channel.send(final).catch((error) => {
+            this.channel.send(final).catch((error) => {
                 Logger.log({
                     level: 'error',
                     message: `Error sending message to Discord: ${error.message}`,
@@ -204,7 +241,7 @@ class ZMachineClient extends EventEmitter {
 
     sendChunk(chunk) {
         if (chunk.length > 0) {
-            sharedData.channel.send(chunk).catch((error) => {
+            this.channel.send(chunk).catch((error) => {
                 Logger.log({
                     level: 'error',
                     message: `Error sending chunk to Discord: ${error.message}`,
@@ -290,6 +327,48 @@ class ZMachineClient extends EventEmitter {
     }
 
     /**
+     * Save the game without asking anyone or posting anything, for when the channel can no longer
+     * be used (the thread has been archived). The save is named like a player's, labelled
+     * "autosave", and shows up in the restore list.
+     *
+     * @param {string} userId - The user to record as having saved, such as whoever played last.
+     * @return {Promise<string|null>} The path saved to, or null if the game could not be saved.
+     */
+    async autoSave(userId) {
+        if (!this.machine) {
+            return null;
+        }
+
+        this.silent = true;
+        try {
+            // A question waiting on a player will never be answered now
+            this.cancelPrompt();
+            if (!(await this.whenReady())) {
+                return null;
+            }
+
+            const savePath = `${sharedData.gameFolder}/${buildSaveName({
+                gameId: this.gameId,
+                channelId: this.channel.id,
+                userId,
+                time: Math.floor(Date.now() / 1000),
+                label: AUTOSAVE_LABEL,
+            })}`;
+
+            this.input.setNextFilename(savePath);
+            this.input.submit('save');
+
+            // The game is back at its prompt once it has finished writing the save
+            if (!(await this.whenReady())) {
+                return null;
+            }
+            return fs.existsSync(savePath) ? savePath : null;
+        } finally {
+            this.silent = false;
+        }
+    }
+
+    /**
      * Stops the game and releases the interpreter.
      */
     stopGame() {
@@ -307,7 +386,11 @@ class ZMachineClient extends EventEmitter {
      * @param {string} content - The message.
      */
     say(content) {
-        sharedData.channel
+        if (this.silent) {
+            return;
+        }
+
+        this.channel
             .send({ content, allowedMentions: { parse: [] } })
             .catch((error) => {
                 Logger.log({
@@ -376,8 +459,8 @@ class ZMachineClient extends EventEmitter {
         }
 
         const name = buildSaveName({
-            gameId: sharedData.gameId,
-            channelId: sharedData.channel.id,
+            gameId: this.gameId,
+            channelId: this.channel.id,
             userId,
             time: Math.floor(Date.now() / 1000),
             label,
@@ -397,9 +480,9 @@ class ZMachineClient extends EventEmitter {
         const label = expandLabelTemplate(
             process.env.DEFAULT_SAVE_NAME || DEFAULT_LABEL_TEMPLATE,
             {
-                game: sharedData.gameId,
+                game: this.gameId,
                 user: user?.username ?? 'player',
-                channel: sharedData.channel?.name,
+                channel: this.channel?.name,
             }
         );
         return label || expandLabelTemplate(DEFAULT_LABEL_TEMPLATE, { user: 'player' });
@@ -412,10 +495,11 @@ class ZMachineClient extends EventEmitter {
      */
     async promptRestoreName() {
         const userId = this.lastUserId;
-        const saves = listSaves(sharedData.gameFolder, sharedData.gameId).slice(
-            0,
-            MAX_RESTORE_CHOICES
-        );
+        // Saves made in this thread come first
+        const saves = preferChannel(
+            listSaves(sharedData.gameFolder, this.gameId),
+            this.channel.id
+        ).slice(0, MAX_RESTORE_CHOICES);
 
         if (saves.length === 0) {
             this.say('There are no saves for this game.');
@@ -458,5 +542,3 @@ class ZMachineClient extends EventEmitter {
         this.input.submit('restore');
     }
 }
-
-export const GameClient = new ZMachineClient();

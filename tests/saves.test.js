@@ -6,7 +6,9 @@ import {
     buildSaveName,
     DEFAULT_LABEL_TEMPLATE,
     expandLabelTemplate,
+    gameForChannel,
     listSaves,
+    preferChannel,
     parseSaveName,
     sanitizeLabel,
 } from '../saves.js';
@@ -163,5 +165,69 @@ describe('listSaves', () => {
 
     it('should return an empty list when the folder cannot be read', () => {
         expect(listSaves(`${folder}/missing`, 'zork1')).toEqual([]);
+    });
+});
+
+describe('preferChannel', () => {
+    const save = (channelId, time) => ({ channelId, time });
+
+    it('should put saves from the channel first, each group newest first', () => {
+        const saves = [save('b', 900), save('a', 800), save('b', 700), save('a', 600)];
+
+        expect(preferChannel(saves, 'a')).toEqual([
+            save('a', 800),
+            save('a', 600),
+            save('b', 900),
+            save('b', 700),
+        ]);
+    });
+
+    it('should leave the order alone when no save is from the channel', () => {
+        const saves = [save('b', 900), save('c', 800)];
+
+        expect(preferChannel(saves, 'a')).toEqual(saves);
+    });
+});
+
+describe('gameForChannel', () => {
+    const games = [
+        { id: 'zork1', name: 'Zork' },
+        { id: 'zork2', name: 'Zork II' },
+        { id: 'sorcerer', name: 'Sorcerer' },
+    ];
+    let folder;
+
+    beforeEach(() => {
+        folder = fs.mkdtempSync(path.join(os.tmpdir(), 'saves-'));
+    });
+
+    afterEach(() => {
+        fs.rmSync(folder, { recursive: true });
+    });
+
+    const addSave = (name) => fs.writeFileSync(path.join(folder, name), '');
+
+    it('should use the game of the newest save made in the thread', () => {
+        addSave('zork1-t1-u1-100.qzl');
+        addSave('sorcerer-t1-u1-200.qzl');
+        addSave('zork2-t2-u1-300.qzl');
+
+        expect(gameForChannel(folder, games, { id: 't1', name: 'x' }).id).toBe('sorcerer');
+    });
+
+    it('should fall back to the game named in the thread\'s name', () => {
+        expect(
+            gameForChannel(folder, games, { id: 't9', name: 'Sorcerer - Mitch' }).id
+        ).toBe('sorcerer');
+    });
+
+    it('should not mistake a longer game name for a shorter one', () => {
+        expect(
+            gameForChannel(folder, games, { id: 't9', name: 'Zork II - Mitch' }).id
+        ).toBe('zork2');
+    });
+
+    it('should return null when the thread says nothing about a game', () => {
+        expect(gameForChannel(folder, games, { id: 't9', name: 'general chat' })).toBeNull();
     });
 });
