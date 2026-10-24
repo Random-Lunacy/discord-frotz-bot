@@ -11,9 +11,7 @@ import { launchGame } from '../../launchGame.js';
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('start')
-        .setDescription(
-            'Start a game. In a text channel it is played in your thread for the game (made if needed); in a thread, there.'
-        );
+        .setDescription('Start a game in your own thread for it (made if needed), or in this thread.');
 
     command.addStringOption((option) =>
         option
