@@ -139,5 +139,5 @@ logs/*.log
 games/games.json
 games/*.z*
 games/*.Z*
-games/*.qzl
+*.qzl
 repomix-output.md
