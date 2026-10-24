@@ -56,6 +56,45 @@ describe('GameSessions', () => {
         expect(sessions.stop('a')).toBe(false);
     });
 
+    it('should save a game and then stop it', async () => {
+        const session = sessions.create({ channel: channel('a'), game, ownerId: 'owner' });
+        session.client.lastUserId = 'player';
+        const autoSave = vi.spyOn(session.client, 'autoSave').mockResolvedValue('/games/x.qzl');
+        const stop = vi.spyOn(session.client, 'stopGame');
+
+        const result = await sessions.autoSaveAndStop('a');
+
+        expect(autoSave).toHaveBeenCalledWith('player');
+        expect(stop).toHaveBeenCalled();
+        expect(result).toEqual({ stopped: true, savePath: '/games/x.qzl' });
+        expect(sessions.get('a')).toBeUndefined();
+    });
+
+    it('should credit the owner when nobody has played yet', async () => {
+        const session = sessions.create({ channel: channel('a'), game, ownerId: 'owner' });
+        const autoSave = vi.spyOn(session.client, 'autoSave').mockResolvedValue(null);
+
+        await sessions.autoSaveAndStop('a');
+
+        expect(autoSave).toHaveBeenCalledWith('owner');
+    });
+
+    it('should stop the game even if saving it fails', async () => {
+        const session = sessions.create({ channel: channel('a'), game, ownerId: 'owner' });
+        vi.spyOn(session.client, 'autoSave').mockRejectedValue(new Error('disk full'));
+
+        await expect(sessions.autoSaveAndStop('a')).rejects.toThrow('disk full');
+
+        expect(sessions.get('a')).toBeUndefined();
+    });
+
+    it('should report that there was no game to stop', async () => {
+        expect(await sessions.autoSaveAndStop('nowhere')).toEqual({
+            stopped: false,
+            savePath: null,
+        });
+    });
+
     it('should limit the number of games, 10 by default', () => {
         expect(sessions.maxGames).toBe(10);
 

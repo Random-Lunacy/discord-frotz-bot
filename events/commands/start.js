@@ -12,7 +12,7 @@ const create = () => {
     const command = new SlashCommandBuilder()
         .setName('start')
         .setDescription(
-            'Start a game. In a text channel the game gets its own thread; in a thread it is played there.'
+            'Start a game. In a text channel it is played in your thread for the game (made if needed); in a thread, there.'
         );
 
     command.addStringOption((option) =>
@@ -52,7 +52,8 @@ const invoke = async (interaction) => {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const result = await launchGame(interaction, gameObj);
+    // Play in the player's existing thread for this game, if they have one, rather than making another
+    const result = await launchGame(interaction, gameObj, { reuse: true });
     if (result.error) {
         await interaction.editReply({ content: result.error });
         return;

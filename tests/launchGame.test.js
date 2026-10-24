@@ -203,6 +203,57 @@ describe('launchGame', () => {
             expect(textChannel.threads.create).not.toHaveBeenCalled();
         });
 
+        describe('archived threads', () => {
+            let archived;
+
+            beforeEach(() => {
+                archived = {
+                    ...saved,
+                    id: 'old-thread',
+                    name: 'Zork I - Mitch',
+                    archived: true,
+                };
+                textChannel.threads.fetchArchived = vi.fn().mockResolvedValue({
+                    threads: { find: (fn) => (fn(archived) ? archived : undefined) },
+                });
+            });
+
+            it('should reopen an archived thread named for the game and player', async () => {
+                await launchGame(interaction, game, { reuse: true });
+
+                expect(textChannel.threads.fetchArchived).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'public' })
+                );
+                expect(archived.setArchived).toHaveBeenCalledWith(false);
+                expect(mockSessions.create).toHaveBeenCalledWith(
+                    expect.objectContaining({ channel: archived })
+                );
+                expect(textChannel.threads.create).not.toHaveBeenCalled();
+            });
+
+            it('should prefer an open thread to an archived one', async () => {
+                const open = { ...saved, id: 'open-thread', name: 'Zork I - Mitch' };
+                textChannel.threads.fetchActive.mockResolvedValue({
+                    threads: { find: (fn) => (fn(open) ? open : undefined) },
+                });
+
+                await launchGame(interaction, game, { reuse: true });
+
+                expect(textChannel.threads.fetchArchived).not.toHaveBeenCalled();
+                expect(mockSessions.create).toHaveBeenCalledWith(
+                    expect.objectContaining({ channel: open })
+                );
+            });
+
+            it('should make a new thread if the archived one cannot be reopened', async () => {
+                archived.setArchived.mockRejectedValue(new Error('locked'));
+
+                await launchGame(interaction, game, { reuse: true });
+
+                expect(textChannel.threads.create).toHaveBeenCalled();
+            });
+        });
+
         it('should not look for a thread to reuse unless asked to', async () => {
             await launchGame(interaction, game);
 

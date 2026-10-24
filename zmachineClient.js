@@ -24,6 +24,7 @@ import {
 ZLogger.setLevel(LogLevel.WARN);
 
 const MAX_RESTORE_CHOICES = 10;
+const AUTOSAVE_LABEL = 'autosave';
 
 /**
  * Plays one game in one Discord channel (or thread). Each running game has its own client.
@@ -175,6 +176,10 @@ export class ZMachineClient extends EventEmitter {
      * @param {string|null} status - The status line (V1-V3 games), if any.
      */
     sendOutput(text, status) {
+        if (this.silent) {
+            return;
+        }
+
         let final = status ? `-# ${status}\n${text}` : text;
 
         // Don't send empty output
@@ -321,6 +326,48 @@ export class ZMachineClient extends EventEmitter {
     }
 
     /**
+     * Save the game without asking anyone or posting anything, for when the channel can no longer
+     * be used (the thread has been archived). The save is named like a player's, labelled
+     * "autosave", and shows up in the restore list.
+     *
+     * @param {string} userId - The user to record as having saved, such as whoever played last.
+     * @return {Promise<string|null>} The path saved to, or null if the game could not be saved.
+     */
+    async autoSave(userId) {
+        if (!this.machine) {
+            return null;
+        }
+
+        this.silent = true;
+        try {
+            // A question waiting on a player will never be answered now
+            this.cancelPrompt();
+            if (!(await this.whenReady())) {
+                return null;
+            }
+
+            const savePath = `${sharedData.gameFolder}/${buildSaveName({
+                gameId: this.gameId,
+                channelId: this.channel.id,
+                userId,
+                time: Math.floor(Date.now() / 1000),
+                label: AUTOSAVE_LABEL,
+            })}`;
+
+            this.input.setNextFilename(savePath);
+            this.input.submit('save');
+
+            // The game is back at its prompt once it has finished writing the save
+            if (!(await this.whenReady())) {
+                return null;
+            }
+            return fs.existsSync(savePath) ? savePath : null;
+        } finally {
+            this.silent = false;
+        }
+    }
+
+    /**
      * Stops the game and releases the interpreter.
      */
     stopGame() {
@@ -338,6 +385,10 @@ export class ZMachineClient extends EventEmitter {
      * @param {string} content - The message.
      */
     say(content) {
+        if (this.silent) {
+            return;
+        }
+
         this.channel
             .send({ content, allowedMentions: { parse: [] } })
             .catch((error) => {

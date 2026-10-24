@@ -96,7 +96,7 @@ The bot is controlled with slash commands. Each game is played in its own thread
 | Command            | Who          | Description                                                                                                                 |
 | ------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | `/games`           | Anyone       | List the available games.                                                                                                   |
-| `/start`           | Anyone       | Start a game. In a text channel the bot creates a thread for it; used inside a thread, the game is played there.            |
+| `/start`           | Anyone       | Start a game. In a text channel it is played in your existing thread for that game (reopened if archived), or a new thread; used inside a thread, the game is played there. |
 | `/restore`         | Anyone       | Choose a save to restore. In a thread with a game running it restores into that game; in a text channel it starts the game again in the thread the save was made in (reopening it if archived), or in a new thread if that one is gone. |
 | `/pause`           | Anyone       | Pause or resume the game in this thread (the bot stops or starts listening to messages).                                    |
 | `/status`          | Anyone       | Show the game in this thread. Server admins also see every game in progress, with who started it, when, and when it was last played. |
@@ -104,10 +104,15 @@ The bot is controlled with slash commands. Each game is played in its own thread
 | `/quit`            | Server admin | Force the game in this thread to stop, for example if it is stuck. Progress since the last save is lost.                    |
 
 Server admins are users with the **Manage Server** permission. Players leave a game themselves by typing `quit` in it.
-A game is also stopped if its thread is deleted or archived, and games do not survive a restart of the bot; saves do.
+A game is stopped if its thread is deleted, and games do not survive a restart of the bot; saves do.
+Threads are matched by name, `<game> - <player>`, so each player gets their own thread for a game and `/start` and
+`/restore` use it again instead of making another.
+
 Discord archives a thread after a period with no messages in it, whether or not the game is paused. The bot's threads
-last 7 days by default; set `THREAD_LIFETIME_DAYS` in `.env` to `1`, `3` or `7` to change that. Anything since the last
-save is lost when a game's thread is archived, so save before leaving a game for a long time.
+last 7 days by default; set `THREAD_LIFETIME_DAYS` in `.env` to `1`, `3` or `7` to change that. When a thread is
+archived (by Discord or by someone closing it) the bot saves the game first, quietly, as an `autosave` that appears in
+the `restore` list, and then stops it. If a game cannot be saved (for example it is not responding), it is stopped without a
+save, so save before leaving a game for a long time.
 
 While a game is running, every message in its thread is sent to the game as a command, so the game's own
 `save`, `restore`, `undo` and `quit` commands all work.

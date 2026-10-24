@@ -5,17 +5,32 @@ const once = false;
 const name = 'threadUpdate';
 
 /**
- * Stop the game in a thread when it is archived, since nobody can play in it any more.
- * Saved games are kept, so the game can be restored in a new thread.
+ * Save the game in a thread when it is archived, then stop it, since nobody can play in the thread
+ * any more. The save is named "autosave" and can be restored in the thread or a new one.
  *
  * @param {object} oldThread - The thread before the change.
  * @param {object} newThread - The thread after the change.
  */
-function invoke(oldThread, newThread) {
-    if (!oldThread.archived && newThread.archived && sessions.stop(newThread.id)) {
+async function invoke(oldThread, newThread) {
+    if (oldThread.archived || !newThread.archived) {
+        return;
+    }
+
+    try {
+        const { stopped, savePath } = await sessions.autoSaveAndStop(newThread.id);
+        if (stopped) {
+            Logger.log({
+                level: 'info',
+                message: savePath
+                    ? `Auto-saved to ${savePath} and stopped the game in archived thread ${newThread.id}`
+                    : `Stopped the game in archived thread ${newThread.id} without a save`,
+            });
+        }
+    } catch (error) {
         Logger.log({
-            level: 'info',
-            message: `Stopped the game in archived thread ${newThread.id}`,
+            level: 'error',
+            message: `Error saving the game in archived thread ${newThread.id}: ${error.message}`,
+            stack: error.stack,
         });
     }
 }

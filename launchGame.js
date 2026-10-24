@@ -21,6 +21,14 @@ export function threadLifetimeMinutes() {
     );
 }
 
+const safely = async (lookup) => {
+    try {
+        return await lookup();
+    } catch {
+        return null;
+    }
+};
+
 /**
  * Make an archived thread usable again.
  *
@@ -41,7 +49,7 @@ async function reopen(thread) {
 
 /**
  * Find an existing thread in the command's channel to play in, instead of making a new one: the
- * thread a save was made in, else an open thread already named for this game and player. A thread
+ * thread a save was made in, else an open or archived thread already named for this game and player. A thread
  * that already has a game running is never reused.
  *
  * @param {object} interaction - The command interaction.
@@ -61,8 +69,20 @@ async function findReusableThread(interaction, name, threadId) {
         }
     }
 
-    const active = await parent.threads.fetchActive().catch(() => null);
-    return active?.threads.find((thread) => thread.name === name && usable(thread)) ?? null;
+    const matches = (thread) => thread.name === name && usable(thread);
+
+    const active = await safely(() => parent.threads.fetchActive());
+    const open = active?.threads.find(matches);
+    if (open) {
+        return open;
+    }
+
+    // A thread that closed itself is as good as an open one
+    const archived = await safely(() =>
+        parent.threads.fetchArchived({ type: 'public', limit: 100 })
+    );
+    const closed = archived?.threads.find(matches);
+    return closed && (await reopen(closed)) ? closed : null;
 }
 
 /**

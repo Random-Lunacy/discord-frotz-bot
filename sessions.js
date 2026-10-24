@@ -89,6 +89,29 @@ export class GameSessions {
         return true;
     }
 
+    /**
+     * Save a game quietly, then stop it. If it cannot be saved it is stopped anyway.
+     *
+     * @param {string} channelId - The channel or thread the game is in.
+     * @return {Promise<{stopped: boolean, savePath: string|null}>} Whether there was a game, and where it was saved.
+     */
+    async autoSaveAndStop(channelId) {
+        const session = this.sessions.get(channelId);
+        if (!session) {
+            return { stopped: false, savePath: null };
+        }
+
+        let savePath = null;
+        try {
+            savePath = await session.client.autoSave(
+                session.client.lastUserId ?? session.ownerId
+            );
+        } finally {
+            this.stop(channelId);
+        }
+        return { stopped: true, savePath };
+    }
+
     remove(channelId) {
         this.sessions.delete(channelId);
     }

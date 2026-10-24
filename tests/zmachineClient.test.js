@@ -158,6 +158,70 @@ describe('ZMachineClient', () => {
             }
         });
 
+        describe('auto-saving', () => {
+            beforeEach(async () => {
+                GameClient.startGame('zork-i.z3');
+                await tick();
+                GameClient.processInput('north', 'u1');
+                await tick();
+                GameClient.processInput('east', 'u1');
+                await tick();
+                channel.send.mockClear();
+            });
+
+            it('should save quietly under a name marked autosave', async () => {
+                const savePath = await GameClient.autoSave('u1');
+
+                expect(savePath).toMatch(/\/zork1-555-u1-\d+-autosave\.qzl$/);
+                expect(fs.existsSync(savePath)).toBe(true);
+                // Nothing may be posted: the thread is archived
+                expect(channel.send).not.toHaveBeenCalled();
+                expect(GameClient.silent).toBe(false);
+            });
+
+            it('should save a game that can be restored', async () => {
+                const savePath = await GameClient.autoSave('u1');
+                GameClient.stopGame();
+
+                const restored = new ZMachineClient({
+                    channel,
+                    gameId: 'zork1',
+                    gameName: 'Zork I',
+                });
+                try {
+                    restored.startGame('zork-i.z3');
+                    await tick();
+                    channel.send.mockClear();
+                    restored.restoreGame(savePath);
+                    await tick(300);
+                    restored.processInput('look');
+                    await tick();
+
+                    expect(sentText().join('\n')).toContain('Behind House');
+                } finally {
+                    restored.stopGame();
+                }
+            });
+
+            it('should be able to save while a question is waiting for a player', async () => {
+                GameClient.processInput('save', 'u1');
+                await tick();
+                expect(GameClient.pendingPrompt).not.toBeNull();
+                channel.send.mockClear();
+
+                const savePath = await GameClient.autoSave('u1');
+
+                expect(savePath).toMatch(/-autosave\.qzl$/);
+                expect(channel.send).not.toHaveBeenCalled();
+            });
+
+            it('should have nothing to save once the game has stopped', async () => {
+                GameClient.stopGame();
+
+                expect(await GameClient.autoSave('u1')).toBeNull();
+            });
+        });
+
         it('should emit end when the game quits', async () => {
             const onEnd = vi.fn();
             GameClient.on('end', onEnd);
