@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import {
     buildSaveName,
+    DEFAULT_LABEL_TEMPLATE,
+    expandLabelTemplate,
     listSaves,
     parseSaveName,
     sanitizeLabel,
@@ -25,6 +27,36 @@ describe('sanitizeLabel', () => {
     it('should return an empty string when nothing is usable', () => {
         expect(sanitizeLabel('!!! ---')).toBe('');
         expect(sanitizeLabel(undefined)).toBe('');
+    });
+});
+
+describe('expandLabelTemplate', () => {
+    const now = new Date(2026, 9, 24, 9, 5);
+
+    it('should fill in the default template', () => {
+        expect(
+            expandLabelTemplate(DEFAULT_LABEL_TEMPLATE, { user: 'Mitch' }, now)
+        ).toBe('mitch_20261024_0905');
+    });
+
+    it('should fill in game and channel', () => {
+        expect(
+            expandLabelTemplate(
+                '{game} in {channel}',
+                { game: 'zork1', channel: 'frotz-dev' },
+                now
+            )
+        ).toBe('zork1_in_frotzdev');
+    });
+
+    it('should leave unknown and missing placeholders empty', () => {
+        expect(expandLabelTemplate('{nope}x{user}', {}, now)).toBe('x');
+    });
+
+    it('should sanitize what the template produces', () => {
+        expect(expandLabelTemplate('../{user}', { user: 'A B' }, now)).toBe(
+            'a_b'
+        );
     });
 });
 

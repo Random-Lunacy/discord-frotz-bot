@@ -152,10 +152,38 @@ describe('ZMachineClient', () => {
                 expect(sentText().join('\n')).toContain('Saving as');
             });
 
-            it('should save without a name when the player skips', async () => {
+            it('should use the default name when the player skips', async () => {
                 await play('save', 'skip');
 
-                expect(savesOnDisk()[0]).toMatch(/^zork1-555-u1-\d+\.qzl$/);
+                expect(savesOnDisk()[0]).toMatch(
+                    /^zork1-555-u1-\d+-player_\d{8}_\d{4}\.qzl$/
+                );
+            });
+
+            it('should use the default name when the player does not reply', async () => {
+                GameClient.promptTimeoutMs = 30;
+                try {
+                    await play('save');
+                    await tick(200);
+                } finally {
+                    GameClient.promptTimeoutMs = 60_000;
+                }
+
+                expect(savesOnDisk()[0]).toMatch(
+                    /^zork1-555-u1-\d+-player_\d{8}_\d{4}\.qzl$/
+                );
+                expect(sentText().join('\n')).toContain('No reply received');
+            });
+
+            it('should use DEFAULT_SAVE_NAME for the default name when it is set', async () => {
+                process.env.DEFAULT_SAVE_NAME = '{game}_auto';
+                try {
+                    await play('save', 'skip');
+                } finally {
+                    delete process.env.DEFAULT_SAVE_NAME;
+                }
+
+                expect(savesOnDisk()[0]).toMatch(/-zork1_auto\.qzl$/);
             });
 
             it('should not save when the player cancels', async () => {

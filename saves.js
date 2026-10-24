@@ -14,6 +14,9 @@ import path from 'path';
 const EXTENSION = '.qzl';
 const MAX_LABEL_LENGTH = 32;
 
+// Name given to a save when the player skips naming it or doesn't answer
+export const DEFAULT_LABEL_TEMPLATE = '{user}_{date}_{time}';
+
 /**
  * Reduce free text to a safe label for use in a file name.
  *
@@ -28,6 +31,30 @@ export function sanitizeLabel(text) {
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '')
         .slice(0, MAX_LABEL_LENGTH);
+}
+
+/**
+ * Fill in a label template. Placeholders are {game}, {user}, {channel}, {date} (YYYYMMDD)
+ * and {time} (HHMM); the date and time are in the bot's local time zone.
+ *
+ * @param {string} template - Template such as '{user}_{date}_{time}'.
+ * @param {object} values - Values for the placeholders; any missing ones are left empty.
+ * @param {Date} [now] - The time to use for {date} and {time}.
+ * @return {string} A sanitized label.
+ */
+export function expandLabelTemplate(template, values, now = new Date()) {
+    const two = (n) => String(n).padStart(2, '0');
+    const fields = {
+        game: values.game ?? '',
+        user: values.user ?? '',
+        channel: values.channel ?? '',
+        date: `${now.getFullYear()}${two(now.getMonth() + 1)}${two(now.getDate())}`,
+        time: `${two(now.getHours())}${two(now.getMinutes())}`,
+    };
+
+    return sanitizeLabel(
+        String(template).replace(/\{(\w+)\}/g, (_, key) => fields[key] ?? '')
+    );
 }
 
 /**

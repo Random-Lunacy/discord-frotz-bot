@@ -104,9 +104,11 @@ The bot is controlled with slash commands. Only one game can run at a time.
 While a game is running, every message in the game channel is sent to the game as a command, so the game's own
 `save`, `restore`, `undo` and `quit` commands all work.
 
--   **Saving:** type `save`. The bot asks the player who typed it to name the save (reply `skip` for no name or
-    `cancel` to cancel). Only that player's reply is used; other messages are ignored until they answer or 60 seconds
-    pass. Anyone in the channel can save.
+-   **Saving:** type `save`. The bot asks the player who typed it to name the save. Reply with a name, `skip` to use
+    the default name, or `cancel` to cancel. If there's no reply within 60 seconds the default name is used. Only that
+    player's reply is used; other messages are ignored until they answer or the time runs out. Anyone in the channel
+    can save. The default name is `<user>_<date>_<time>`, which you can change with `DEFAULT_SAVE_NAME` in `.env`
+    using the placeholders `{game}`, `{user}`, `{channel}`, `{date}` and `{time}`.
 -   **Restoring:** type `restore`. The bot lists the most recent saves for the running game, and only the player who
     typed `restore` can choose one (reply with a number, `latest` or `cancel`).
 -   **Quitting:** type `quit` and answer the game's own confirmation. The bot notices when the game ends.

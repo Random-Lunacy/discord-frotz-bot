@@ -13,12 +13,16 @@ import {
 } from 'rezrov-zmachine';
 import { DiscordScreen } from './discordScreen.js';
 import { DiscordInputProcessor } from './discordInputProcessor.js';
-import { buildSaveName, listSaves, sanitizeLabel } from './saves.js';
+import {
+    buildSaveName,
+    DEFAULT_LABEL_TEMPLATE,
+    expandLabelTemplate,
+    listSaves,
+    sanitizeLabel,
+} from './saves.js';
 
 ZLogger.setLevel(LogLevel.WARN);
 
-// How long to wait for a player to answer a save or restore question
-const PROMPT_TIMEOUT_MS = 60_000;
 const MAX_RESTORE_CHOICES = 10;
 
 class ZMachineClient extends EventEmitter {
@@ -28,6 +32,8 @@ class ZMachineClient extends EventEmitter {
     gamePath = '';
     lastUserId = null;
     pendingPrompt = null;
+
+    promptTimeoutMs = 60_000;
 
     lastError = null;
 
@@ -314,7 +320,7 @@ class ZMachineClient extends EventEmitter {
                 this.pendingPrompt = null;
                 resolve(answer);
             };
-            const timer = setTimeout(() => finish(null), PROMPT_TIMEOUT_MS);
+            const timer = setTimeout(() => finish(null), this.promptTimeoutMs);
             this.pendingPrompt = {
                 userId,
                 answer: (text) => finish(text.trim()),
@@ -334,9 +340,10 @@ class ZMachineClient extends EventEmitter {
      */
     async promptSaveName() {
         const userId = this.lastUserId;
+        const defaultLabel = this.defaultLabel(userId);
         this.say(
-            `<@${userId}> Name this save, or reply \`skip\` for no name or \`cancel\` to cancel. ` +
-                'Only your reply will be used.'
+            `<@${userId}> Name this save, reply \`skip\` to name it \`${defaultLabel}\`, ` +
+                'or reply `cancel` to cancel. Only your reply will be used.'
         );
 
         const answer = await this.askUser(userId);
@@ -345,13 +352,14 @@ class ZMachineClient extends EventEmitter {
             return '';
         }
 
-        let label = '';
+        let label = defaultLabel;
         if (answer === null) {
-            this.say('No reply received, saving without a name.');
+            this.say('No reply received, using the default name.');
         } else if (answer.toLowerCase() !== 'skip') {
             label = sanitizeLabel(answer);
             if (!label) {
-                this.say('That name has no usable letters or numbers, saving without a name.');
+                label = defaultLabel;
+                this.say('That name has no usable letters or numbers, using the default name.');
             }
         }
 
@@ -364,6 +372,25 @@ class ZMachineClient extends EventEmitter {
         });
         this.say(`Saving as \`${name}\`.`);
         return `${sharedData.gameFolder}/${name}`;
+    }
+
+    /**
+     * The name a save gets when the player doesn't give one, from DEFAULT_SAVE_NAME if set.
+     *
+     * @param {string} userId - The player saving.
+     * @return {string} The label.
+     */
+    defaultLabel(userId) {
+        const user = sharedData.client?.users?.cache?.get(userId);
+        const label = expandLabelTemplate(
+            process.env.DEFAULT_SAVE_NAME || DEFAULT_LABEL_TEMPLATE,
+            {
+                game: sharedData.gameId,
+                user: user?.username ?? 'player',
+                channel: sharedData.channel?.name,
+            }
+        );
+        return label || expandLabelTemplate(DEFAULT_LABEL_TEMPLATE, { user: 'player' });
     }
 
     /**
