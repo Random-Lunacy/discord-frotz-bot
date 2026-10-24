@@ -80,6 +80,36 @@ describe('ZMachineClient', () => {
         });
     });
 
+    describe('sendOutput', () => {
+        it('should send a block of positioned text before the game text', () => {
+            const client = new ZMachineClient({ channel, gameId: 'zork1', gameName: 'Zork I' });
+
+            client.sendOutput('You are here.', 'Place · Score: 1', '```\n  TITLE\n```');
+
+            expect(channel.send.mock.calls.map(([sent]) => sent)).toEqual([
+                '```\n  TITLE\n```',
+                '-# Place · Score: 1\nYou are here.',
+            ]);
+        });
+
+        it('should send just the block when the game printed no text', () => {
+            const client = new ZMachineClient({ channel, gameId: 'zork1', gameName: 'Zork I' });
+
+            client.sendOutput('', null, '```\nFORM\n```');
+
+            expect(channel.send.mock.calls.map(([sent]) => sent)).toEqual(['```\nFORM\n```']);
+        });
+
+        it('should send nothing while silent', () => {
+            const client = new ZMachineClient({ channel, gameId: 'zork1', gameName: 'Zork I' });
+            client.silent = true;
+
+            client.sendOutput('Text', 'Status', '```\nBlock\n```');
+
+            expect(channel.send).not.toHaveBeenCalled();
+        });
+    });
+
     describe('processInput', () => {
         it('should return false when no game is running', () => {
             expect(GameClient.processInput('look')).toBe(false);
