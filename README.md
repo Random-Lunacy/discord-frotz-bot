@@ -76,7 +76,7 @@ anyone else.
     ```sh
     cp .env.template .env
     ```
-5. Edit the `.env` file and replace `your-token-goes-here` with your bot token (`BOT_TOKEN`).
+5. Edit the `.env` file and replace `your-token-goes-here` with your bot token.
 6. Copy the Z-machine games files you want your bot to use to the `games` folder.
 7. Create a `games.json` file in the `games` folder from `games/games.json.template`.
     ```sh
