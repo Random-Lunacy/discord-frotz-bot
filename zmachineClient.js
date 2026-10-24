@@ -1,20 +1,28 @@
 import { sharedData } from './sharedData.js';
 import {} from 'dotenv/config';
 import { Logger } from './logger.js';
-import { StringDecoder } from 'string_decoder';
-import { spawn } from 'child_process';
 import fs from 'fs';
-import { CleanAnsi } from './cleanAnsi.js';
+import { EventEmitter } from 'events';
+import {
+    BlorbParser,
+    FileSystemProvider,
+    Logger as ZLogger,
+    LogLevel,
+    QuetzalFormat,
+    ZMachine,
+} from 'rezrov-zmachine';
+import { DiscordScreen } from './discordScreen.js';
+import { DiscordInputProcessor } from './discordInputProcessor.js';
 
-class FrotzClient {
-    dFrotz = null;
-    rawOutput = '';
-    compiledOutput = '';
+ZLogger.setLevel(LogLevel.WARN);
+
+class ZMachineClient extends EventEmitter {
+    machine = null;
+    screen = null;
+    input = null;
     gamePath = '';
-    gameHeader = '';
 
     lastError = null;
-    decoder = new StringDecoder('utf8');
 
     /**
      * Verifies if the game file exists at the given file path.
@@ -30,129 +38,84 @@ class FrotzClient {
      * Starts the game specified by the given game file.
      *
      * @param {string} gameFile - The name of the game file.
-     * @return {boolean} Returns false if the game file does not exist, otherwise returns true.
+     * @return {boolean} Returns false if the game could not be started, otherwise returns true.
      */
     startGame(gameFile) {
         this.gamePath = sharedData.gameFolder + '/' + gameFile;
 
         if (!this.verifyGameFile(this.gamePath)) {
-            Logger.log({
-                level: 'warn',
-                message: `Failed to launch Frotz: the game file ${gameFile} does not exist.`,
-            });
-            this.lastError = new Error(
-                `Failed to launch Frotz: the game file ${gameFile} does not exist.`
-            );
+            const message = `Failed to start game: the game file ${gameFile} does not exist.`;
+            Logger.log({ level: 'warn', message });
+            this.lastError = new Error(message);
             return false;
         }
 
         Logger.log({
             level: 'info',
-            message: `Launching Frotz: ${this.gamePath}`,
+            message: `Starting game: ${this.gamePath}`,
         });
 
-        // Create dFrotz child process for the game
-        // -p   plain ASCII output only
-        // -m   turn off MORE prompts
-        // -R   restrict Frotz read/write to the specified folder
-        // -Z   Suppress errors in output
-        this.dFrotz = spawn('dfrotz', [
-            '-f',
-            'ansi',
-            '-m',
-            '-Z',
-            '0',
-            '-R',
-            sharedData.gameFolder,
-            this.gamePath,
-        ]);
+        try {
+            let story = fs.readFileSync(this.gamePath);
+            let blorbMap = null;
+            let blorbData = null;
+            if (BlorbParser.isBlorb(story)) {
+                blorbMap = BlorbParser.parse(story);
+                blorbData = story;
+                story = BlorbParser.getExecData(blorbMap, story) ?? story;
+            }
 
-        // Create Frotz child process for the game
-        //this.dFrotz = spawn('frotz', ['-p', '-Z', '0', '-R', sharedData.gameFolder, this.gamePath]);
+            this.screen = new DiscordScreen((text, status) =>
+                this.sendOutput(text, status)
+            );
+            this.screen.onQuit = () => this.handleGameEnd();
+            this.input = new DiscordInputProcessor(this.screen);
 
-        // Setup stream from frotz's stdout so that we can get its output
-        this.dFrotz.stdout.on('data', (chunk) => {
-            this.receiveFrotzOutput(chunk);
-        });
+            // Quetzal (.qzl) is the same save format dfrotz writes
+            this.machine = new ZMachine(
+                story,
+                this.screen,
+                this.input,
+                undefined,
+                new FileSystemProvider(),
+                new QuetzalFormat()
+            );
+            this.input.machine = this.machine;
+            if (blorbMap && blorbData) {
+                this.machine.setBlorb(blorbMap, blorbData);
+            }
+
+            this.machine.execute();
+        } catch (error) {
+            Logger.log({
+                level: 'error',
+                message: `Failed to start game: ${error.message}`,
+                stack: error.stack,
+            });
+            this.lastError = new Error(`Failed to start game: ${error.message}`);
+            return false;
+        }
 
         return true;
     }
 
     /**
-     * Receives a chunk of data from the dfrotz output and processes it.
-     *
-     * @param {chunk} chunk - The chunk of data received from the dfrotz output.
-     * @return None
+     * Called when the game itself ends (for example, the player quits in-game).
      */
-    receiveFrotzOutput(chunk) {
-        let _string = this.decoder.write(chunk);
-
-        this.rawOutput += _string;
-
-        // this marks the end of input
-        if (/(\n>)/.exec(this.rawOutput)) {
-            this.cleanUpOutput();
-        }
-    }
-
-    /**
-     * Clean up the output by removing certain elements.
-     *
-     * @param {string} raw - The raw output to clean up.
-     * @return {string} The cleaned up output.
-     */
-    cleanUpOutput() {
-        let splitRaw = this.rawOutput.split(/\n/g);
-        let outputArray = '';
-
-        for (const element of splitRaw) {
-            let cleanedElement = CleanAnsi.replace(element);
-
-            if (this.shouldSkipElement(cleanedElement)) {
-                continue;
-            }
-
-            if (cleanedElement.trim().startsWith('[rev]')) {
-                this.gameHeader = cleanedElement
-                    .substring(5, cleanedElement.length)
-                    .trim();
-                continue;
-            }
-
-            if (cleanedElement.trim().length === 0) {
-                this.compiledOutput = outputArray;
-                this.sendOutput();
-                outputArray = '';
-                continue;
-            }
-
-            outputArray += cleanedElement.trimEnd() + ' \n';
-        }
-
-        this.rawOutput = '';
-        if (outputArray.length > 0) {
-            this.compiledOutput = outputArray;
-            this.sendOutput();
-        }
-    }
-
-    shouldSkipElement(element) {
-        const trimmedElement = element.trim();
-        return (
-            trimmedElement === 'Using ANSI formatting.' ||
-            trimmedElement === 'Loading ' + this.gamePath + '.' ||
-            trimmedElement.startsWith('Please enter a filename [') ||
-            trimmedElement === '>' ||
-            trimmedElement.length === 0
-        );
+    handleGameEnd() {
+        this.machine = null;
+        this.emit('end');
     }
 
     /**
      * Sends the game output to the channel, splitting into multiple messages if needed.
      * Discord has a 2000 character limit per message.
+     *
+     * @param {string} text - The text the game printed.
+     * @param {string|null} status - The status line (V1-V3 games), if any.
      */
-    sendOutput() {
-        let final = Buffer.from(this.compiledOutput, 'utf-8').toString();
+    sendOutput(text, status) {
+        let final = status ? `-# ${status}\n${text}` : text;
 
         // Don't send empty output
         if (final.length === 0) {
@@ -174,8 +137,6 @@ class FrotzClient {
             // Try to split at paragraph boundaries when possible
             this.sendLongMessage(final);
         }
-
-        this.compiledOutput = '';
     }
 
     /**
@@ -259,20 +220,27 @@ class FrotzClient {
     }
 
     /**
-     * Send the input message to dfrotz.
+     * Send the input message to the game.
      *
      * @param {string} message - The input message to be processed.
+     * @return {boolean} False if the game is not waiting for input.
      */
     processInput(message) {
-        this.dFrotz.stdin.write(message + '\n');
+        if (!this.machine) {
+            return false;
+        }
+        return this.input.submit(message);
     }
 
     /**
-     * Stops the game and performs cleanup of the dfrotz child process.
+     * Stops the game and releases the interpreter.
      */
     stopGame() {
-        // cleanup the child process
-        this.dFrotz.kill();
+        if (this.machine) {
+            this.input.cancelInput(this.machine);
+            this.machine.quit();
+            this.machine = null;
+        }
     }
 
     /**
@@ -281,19 +249,19 @@ class FrotzClient {
      * @param {string} savePath - The path where the game should be saved.
      */
     saveGame(savePath) {
-        this.dFrotz.stdin.write('save\n');
-        this.dFrotz.stdin.write(savePath + '\n');
+        this.input.setNextFilename(savePath);
+        this.input.submit('save');
     }
 
     /**
      * Restore the game from the specified path.
      *
-     * @param {string} savePath - The path to teh save file to be restored.
+     * @param {string} savePath - The path to the save file to be restored.
      */
     restoreGame(savePath) {
-        this.dFrotz.stdin.write('restore\n');
-        this.dFrotz.stdin.write(savePath + '\n');
+        this.input.setNextFilename(savePath);
+        this.input.submit('restore');
     }
 }
 
-export const Frotz = new FrotzClient();
+export const GameClient = new ZMachineClient();

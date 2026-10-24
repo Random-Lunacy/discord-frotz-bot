@@ -1,7 +1,7 @@
 ## Configuring Games
 
 Place games files in this folder (or in the folder you specified with `GAME_FOLDER` in `.env`). 
-Game files should conform to the Z-Machine standard. V1-V5 files are supported.
+Game files should conform to the Z-Machine standard. V1-V5 files are supported (V6-V8 are not yet reliable).
 
 Create a `games.json` file int the the folder using `games.json.template` as a template
 

@@ -64,7 +64,7 @@ async function invoke(interaction) {
             let saveFile = `${sharedData.gameId}-${unixTime}-${interaction.user.id}.qzl`;
             let savePath = `${sharedData.gameFolder}/${saveFile}`;
 
-            sharedData.frotzClient.saveGame(savePath);
+            sharedData.gameClient.saveGame(savePath);
 
             await confirmation.update({
                 content: 'Game Saved.',

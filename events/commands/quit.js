@@ -71,7 +71,7 @@ async function invoke(interaction) {
             sharedData.playingGame = false;
             sharedData.gameActive = false;
             sharedData.gameId = null;
-            sharedData.frotzClient.stopGame();
+            sharedData.gameClient.stopGame();
 
             await confirmation.update({
                 content: 'Quitting ' + gameName + '.',

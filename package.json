@@ -18,6 +18,7 @@
         "discord.js": "^14.25.1",
         "dotenv": "^18.0.9",
         "glob": "^13.0.0",
+        "rezrov-zmachine": "file:../rezrov-zmachine",
         "winston": "^3.18.3"
     },
     "imports": {

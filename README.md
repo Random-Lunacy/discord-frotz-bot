@@ -4,15 +4,16 @@
 
 ## About The Project
 
-This project enables you to host and run interactive fiction games on Discord using [Frotz](https://661.org/proj/if/frotz/), a popular Z-machine interpreter. Most interactive fiction games with a `.z[number]`
-file extension should work correctly.
+This project enables you to host and run interactive fiction games on Discord. Games are played by typing in a
+channel, and the bot replies with the game's output. Games run on [rezrov-zmachine](https://github.com/Random-Lunacy/rezrov-zmachine),
+a Z-machine interpreter written in TypeScript that runs inside the bot, so no external interpreter needs to be installed.
+Most interactive fiction games with a `.z[number]` file extension (Z-machine versions 1-5) should work correctly.
 
 <!-- GETTING STARTED -->
 
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+Follow these steps to get a local copy of the bot up and running.
 
 ### Prerequisites
 
@@ -32,13 +33,9 @@ To get a local copy up and running follow these simple example steps.
     npm --version
     ```
 
--   [Frotz](https://661.org/proj/if/frotz/)
+-   [Git](https://git-scm.com/)
 
-    This bot uses the `dfrotz` implementation of Frotz to run the interactive fiction games. Verify your Frotz installation by running the following command:
-
-    ```sh
-    dfrotz -v
-    ```
+    Needed to fetch the Z-machine interpreter, which is not yet published to npm.
 
 ### Configure a Discord Bot Account
 
@@ -57,33 +54,59 @@ anyone else.
 
 ### Installation
 
-1. Clone the repo.
+1. Clone the bot and the interpreter side by side. The bot expects `rezrov-zmachine` in a sibling folder
+   (it is referenced as `file:../rezrov-zmachine` in `package.json`).
     ```sh
     git clone https://github.com/Random-Lunacy/discord-frotz-bot.git
+    git clone https://github.com/Random-Lunacy/rezrov-zmachine.git
     ```
-2. Install NPM packages.
+2. Build the interpreter.
+    ```sh
+    cd rezrov-zmachine
+    npm install
+    npm run build
+    cd ..
+    ```
+3. Install the bot's NPM packages.
     ```sh
     cd discord-frotz-bot
     npm install
     ```
-3. Create a `.env` file in the repository root from `.env.template`.
+4. Create a `.env` file in the repository root from `.env.template`.
     ```sh
     cp .env.template .env
     ```
-4. Edit the `.env` file and replace `your-token-goes-here` with your bot token.
-5. Copy the Z-machine games files you want your bot to use to the `games` folder.
-6. Create a `games.json` file in the `games` folder from `games/games.json.template`.
+5. Edit the `.env` file and replace `your-token-goes-here` with your bot token.
+6. Copy the Z-machine games files you want your bot to use to the `games` folder.
+7. Create a `games.json` file in the `games` folder from `games/games.json.template`.
     ```sh
     cp games/games.json.template games/games.json
     ```
-7. Edit `games.json` to include for your Z-machine games. See `games/games.md` for more information.
-8. Start the bot with `npm run start`
+8. Edit `games.json` to include for your Z-machine games. See `games/games.md` for more information.
+9. Start the bot with `npm run start`
 
 <!-- USAGE EXAMPLES -->
 
 ## Usage
 
-TODO: Add examples of how to use the bot.
+The bot is controlled with slash commands. Only one game can run at a time.
+
+| Command    | Description                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| `/games`   | List the available games.                                                                         |
+| `/channel` | Choose the channel the game is played in (defaults to the current channel).                       |
+| `/start`   | Start a game.                                                                                     |
+| `/save`    | Save the game. Saves are stored in the games folder as `<game>-<time>-<user>.qzl`.                |
+| `/restore` | Restore the latest save, or choose a save. Can also start the game if none is running.            |
+| `/pause`   | Pause or resume the bot's listening to the channel.                                               |
+| `/status`  | Show the bot's current state.                                                                     |
+| `/quit`    | Quit the game. Progress since the last save is lost.                                              |
+
+While a game is running, every message in the game channel is sent to the game as a command. `save`, `restore` and `quit`
+typed as messages are redirected to the slash commands above.
+
+For games that show a status line (Z-machine versions 1-3), the location, score and moves are shown above each reply.
+Saves use the standard Quetzal (`.qzl`) format, so saves made by other interpreters, including Frotz, can be restored.
 
 <!-- ROADMAP -->
 
@@ -108,5 +131,7 @@ Project Link: [https://github.com/Random-Lunacy/discord-frotz-bot](https://githu
 
 ## Acknowledgments
 
--   Many thanks to the team who build and maintain [Frotz](https://661.org/proj/if/frotz/). Without their work
-    this bot would not be possible.
+-   [rezrov-zmachine](https://github.com/Random-Lunacy/rezrov-zmachine), the Z-machine interpreter that runs the games,
+    and [ebozz](https://github.com/toshok/ebozz) by Chris Toshok, which it is based on.
+-   Many thanks to the team who build and maintain [Frotz](https://661.org/proj/if/frotz/), which powered earlier
+    versions of this bot.

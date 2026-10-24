@@ -66,9 +66,9 @@ const invoke = (interaction) => {
         flags: MessageFlags.Ephemeral,
     });
 
-    if (!sharedData.frotzClient.startGame(gameObj.file)) {
-        interaction.reply({
-            content: sharedData.frotzClient.lastError.message,
+    if (!sharedData.gameClient.startGame(gameObj.file)) {
+        interaction.followUp({
+            content: sharedData.gameClient.lastError.message,
             flags: MessageFlags.Ephemeral,
         });
         return;

@@ -1,7 +1,7 @@
 // Data shared across the bot
 import { } from 'dotenv/config';
 import fs from 'fs';
-import { Frotz } from './frotzClient.js';
+import { GameClient } from './zmachineClient.js';
 
 const data = fs.readFileSync(`${process.env.GAME_FOLDER}/games.json`);
 
@@ -14,5 +14,5 @@ export const sharedData = {
     gameList: JSON.parse(data),
     listenToGame: false,
     gameActive: false,
-    frotzClient: Frotz,
+    gameClient: GameClient,
 };
