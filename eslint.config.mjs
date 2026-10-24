@@ -1,4 +1,4 @@
-import globals from "globals";
+import globals from 'globals';
 
 export default [{
     languageOptions: {
@@ -7,16 +7,16 @@ export default [{
             ...globals.commonjs,
         },
 
-        ecmaVersion: "latest",
-        sourceType: "module",
+        ecmaVersion: 'latest',
+        sourceType: 'module',
     },
 
     rules: {
-        indent: ["error", 4],
-        "linebreak-style": ["error", "unix"],
-        quotes: ["error", "single"],
-        semi: ["error", "always"],
+        indent: ['error', 4],
+        'linebreak-style': ['error', 'unix'],
+        quotes: ['error', 'single'],
+        semi: ['error', 'always'],
     },
 }, {
-    files: ["**/.eslintrc.{js,cjs}"],
+    files: ['**/.eslintrc.{js,cjs}'],
 }];

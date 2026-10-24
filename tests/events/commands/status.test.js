@@ -13,11 +13,13 @@ vi.mock('../../../sharedData.js', () => ({
 
 vi.mock('discord.js', () => {
     return {
-        EmbedBuilder: vi.fn().mockImplementation(() => ({
-            setTitle: vi.fn().mockReturnThis(),
-            setColor: vi.fn().mockReturnThis(),
-            addFields: vi.fn().mockReturnThis(),
-        })),
+        EmbedBuilder: vi.fn().mockImplementation(function () {
+            return {
+                setTitle: vi.fn().mockReturnThis(),
+                setColor: vi.fn().mockReturnThis(),
+                addFields: vi.fn().mockReturnThis(),
+            };
+        }),
         SlashCommandBuilder: vi.fn(),
     };
 });

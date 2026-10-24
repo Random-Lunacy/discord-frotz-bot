@@ -25,11 +25,13 @@ const mockSharedData = {
 // Mock dependencies with proper exports
 vi.mock('discord.js', () => ({
     __esModule: true,
-    ButtonBuilder: vi.fn().mockImplementation(() => ({
-        setCustomId: vi.fn().mockReturnThis(),
-        setLabel: vi.fn().mockReturnThis(),
-        setStyle: vi.fn().mockReturnThis(),
-    })),
+    ButtonBuilder: vi.fn().mockImplementation(function () {
+        return {
+            setCustomId: vi.fn().mockReturnThis(),
+            setLabel: vi.fn().mockReturnThis(),
+            setStyle: vi.fn().mockReturnThis(),
+        };
+    }),
     ButtonStyle: {
         Danger: 4,
         Secondary: 2,
@@ -38,9 +40,11 @@ vi.mock('discord.js', () => ({
     MessageFlags: {
         Ephemeral: 64,
     },
-    ActionRowBuilder: vi.fn().mockImplementation(() => ({
-        addComponents: vi.fn().mockReturnThis(),
-    })),
+    ActionRowBuilder: vi.fn().mockImplementation(function () {
+        return {
+            addComponents: vi.fn().mockReturnThis(),
+        };
+    }),
 }));
 
 // Use a relative path for the mock
