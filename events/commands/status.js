@@ -10,11 +10,11 @@ const MAX_FIELD_LENGTH = 1024;
 const create = () => {
     const command = new SlashCommandBuilder()
         .setName('status')
-        .setDescription('Show the game in this channel. Admins can list every game in progress.')
+        .setDescription('Show the game in this channel. Admins also see every game in progress.')
         .addBooleanOption((option) =>
             option
                 .setName('all')
-                .setDescription('Admins only: show every game in progress.')
+                .setDescription('Admins only: show only the list of every game in progress.')
                 .setRequired(false)
         );
 
@@ -44,44 +44,53 @@ const describe = (session) =>
     `<#${session.channel.id}> **${session.game.name}**, started by <@${session.ownerId}> ${ago(session.startedAt)}, ` +
     `last activity ${ago(session.lastActivity)}${session.paused ? ', paused' : ''}`;
 
+// The games in progress, with enough detail for an admin to find each one
+const gamesField = () => {
+    const all = sessions.list();
+    let lines = all.map(describe).join('\n');
+    if (lines.length > MAX_FIELD_LENGTH) {
+        lines = lines.slice(0, MAX_FIELD_LENGTH - 20).replace(/\n[^\n]*$/, '') + '\n…and more';
+    }
+
+    return {
+        name: `Games in progress (${all.length} of ${sessions.maxGames})`,
+        value: lines || 'No games are running.',
+    };
+};
+
 // Called by the interactionCreate event listener when the corresponding command is invoked
 const invoke = (interaction) => {
     const embed = new EmbedBuilder().setTitle('Frotz Bot Status').setColor(0x0099ff);
+    const admin = isAdmin(interaction);
+    const onlyList = interaction.options.getBoolean('all');
 
-    if (interaction.options.getBoolean('all')) {
-        if (!isAdmin(interaction)) {
-            interaction.reply({
-                content: 'Only server admins can list every game.',
-                flags: MessageFlags.Ephemeral,
-            });
-            return;
-        }
+    if (onlyList && !admin) {
+        interaction.reply({
+            content: 'Only server admins can list every game.',
+            flags: MessageFlags.Ephemeral,
+        });
+        return;
+    }
 
-        const all = sessions.list();
-        let lines = all.map(describe).join('\n');
-        if (lines.length > MAX_FIELD_LENGTH) {
-            lines = lines.slice(0, MAX_FIELD_LENGTH - 20).replace(/\n[^\n]*$/, '') + '\n…and more';
-        }
-
-        embed.addFields([
-            {
-                name: `Games in progress (${all.length} of ${sessions.maxGames})`,
-                value: lines || 'No games are running.',
-            },
-        ]);
-    } else {
+    if (!onlyList) {
         const session = sessions.get(interaction.channel.id);
         embed.addFields([
             {
                 name: 'This channel',
                 value: session ? describe(session) : 'No game is running here. Use `/start` to begin one.',
             },
-            {
+        ]);
+    }
+
+    // Admins see every game; everyone else only how many are running
+    embed.addFields([
+        admin
+            ? gamesField()
+            : {
                 name: 'Games in progress',
                 value: `${sessions.size} of ${sessions.maxGames}`,
             },
-        ]);
-    }
+    ]);
 
     interaction.reply({
         embeds: [embed],

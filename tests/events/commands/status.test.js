@@ -62,6 +62,33 @@ describe('status command', () => {
         mockPermissions.isAdmin.mockReturnValue(false);
     });
 
+    it('should show admins the details of every game along with this channel', () => {
+        mockPermissions.isAdmin.mockReturnValue(true);
+        mockSessions.get.mockReturnValue(session());
+        mockSessions.list.mockReturnValue([
+            session(),
+            session({ channel: { id: 'thread-2' }, game: { name: 'Sorcerer' } }),
+        ]);
+
+        invoke(interaction);
+
+        const [here, list] = embeds[0].fields;
+        expect(here.name).toBe('This channel');
+        expect(list.name).toContain('(2 of 10)');
+        expect(list.value).toContain('<#thread-2> **Sorcerer**');
+    });
+
+    it('should only show non-admins the count of games', () => {
+        mockSessions.size = 3;
+        mockSessions.list.mockReturnValue([session()]);
+
+        invoke(interaction);
+
+        const [, count] = embeds[0].fields;
+        expect(count.value).toBe('3 of 10');
+        expect(mockSessions.list).not.toHaveBeenCalled();
+    });
+
     it('should describe the game in this channel', () => {
         mockSessions.get.mockReturnValue(session());
         mockSessions.size = 1;
@@ -110,6 +137,7 @@ describe('status command', () => {
 
         invoke(interaction);
 
+        expect(embeds[0].fields).toHaveLength(1);
         const [field] = embeds[0].fields;
         expect(field.name).toContain('(2 of 10)');
         expect(field.value).toContain('<#thread-1> **Zork I**');
