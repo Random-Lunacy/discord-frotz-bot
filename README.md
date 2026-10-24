@@ -97,7 +97,7 @@ The bot is controlled with slash commands. Each game is played in its own thread
 | ------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | `/games`           | Anyone       | List the available games.                                                                                                   |
 | `/start`           | Anyone       | Start a game. In a text channel the bot creates a thread for it; used inside a thread, the game is played there.            |
-| `/restore`         | Anyone       | Choose a save to restore. In a thread with a game running it restores into that game; elsewhere it starts the game in a new thread. |
+| `/restore`         | Anyone       | Choose a save to restore. In a thread with a game running it restores into that game; in a text channel it starts the game again in the thread the save was made in (reopening it if archived), or in a new thread if that one is gone. |
 | `/pause`           | Anyone       | Pause or resume the game in this thread (the bot stops or starts listening to messages).                                    |
 | `/status`          | Anyone       | Show the game in this thread. Server admins also see every game in progress, with who started it, when, and when it was last played. |
 | `/status all:True` | Server admin | Show only the list of every game in progress.                                                                               |

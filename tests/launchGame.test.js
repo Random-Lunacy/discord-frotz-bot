@@ -108,6 +108,117 @@ describe('launchGame', () => {
         );
     });
 
+    describe('reusing a thread', () => {
+        let saved;
+
+        beforeEach(() => {
+            saved = {
+                id: 'saved-thread',
+                parentId: 'text-1',
+                archived: false,
+                isThread: () => true,
+                members: { add: vi.fn().mockResolvedValue({}) },
+                setArchived: vi.fn().mockResolvedValue({}),
+                delete: vi.fn(),
+            };
+            interaction.guild = {
+                channels: { fetch: vi.fn().mockResolvedValue(saved) },
+            };
+            textChannel.threads.fetchActive = vi.fn().mockResolvedValue({
+                threads: { find: () => undefined },
+            });
+        });
+
+        it('should play in the thread the save was made in', async () => {
+            const result = await launchGame(interaction, game, {
+                reuse: true,
+                threadId: 'saved-thread',
+            });
+
+            expect(interaction.guild.channels.fetch).toHaveBeenCalledWith('saved-thread');
+            expect(textChannel.threads.create).not.toHaveBeenCalled();
+            expect(mockSessions.create).toHaveBeenCalledWith(
+                expect.objectContaining({ channel: saved })
+            );
+            expect(saved.members.add).toHaveBeenCalledWith('u1');
+            expect(result.session).toBe(session);
+        });
+
+        it('should reopen the thread if it was archived', async () => {
+            saved.archived = true;
+
+            await launchGame(interaction, game, { reuse: true, threadId: 'saved-thread' });
+
+            expect(saved.setArchived).toHaveBeenCalledWith(false);
+            expect(textChannel.threads.create).not.toHaveBeenCalled();
+        });
+
+        it('should make a new thread if the archived one cannot be reopened', async () => {
+            saved.archived = true;
+            saved.setArchived.mockRejectedValue(new Error('locked'));
+
+            await launchGame(interaction, game, { reuse: true, threadId: 'saved-thread' });
+
+            expect(textChannel.threads.create).toHaveBeenCalled();
+        });
+
+        it('should make a new thread if the saved one is gone', async () => {
+            interaction.guild.channels.fetch.mockRejectedValue(new Error('Unknown Channel'));
+
+            await launchGame(interaction, game, { reuse: true, threadId: 'saved-thread' });
+
+            expect(textChannel.threads.create).toHaveBeenCalled();
+        });
+
+        it('should not reuse a thread from another channel', async () => {
+            saved.parentId = 'other-channel';
+
+            await launchGame(interaction, game, { reuse: true, threadId: 'saved-thread' });
+
+            expect(textChannel.threads.create).toHaveBeenCalled();
+        });
+
+        it('should not reuse a thread that already has a game', async () => {
+            mockSessions.get.mockImplementation((id) =>
+                id === 'saved-thread' ? {} : undefined
+            );
+
+            await launchGame(interaction, game, { reuse: true, threadId: 'saved-thread' });
+
+            expect(textChannel.threads.create).toHaveBeenCalled();
+        });
+
+        it('should fall back to an open thread named for the game and player', async () => {
+            const named = { ...saved, id: 'named-thread', name: 'Zork I - Mitch' };
+            textChannel.threads.fetchActive.mockResolvedValue({
+                threads: { find: (fn) => (fn(named) ? named : undefined) },
+            });
+
+            await launchGame(interaction, game, { reuse: true });
+
+            expect(interaction.guild.channels.fetch).not.toHaveBeenCalled();
+            expect(mockSessions.create).toHaveBeenCalledWith(
+                expect.objectContaining({ channel: named })
+            );
+            expect(textChannel.threads.create).not.toHaveBeenCalled();
+        });
+
+        it('should not look for a thread to reuse unless asked to', async () => {
+            await launchGame(interaction, game);
+
+            expect(interaction.guild.channels.fetch).not.toHaveBeenCalled();
+            expect(textChannel.threads.create).toHaveBeenCalled();
+        });
+
+        it('should keep a reused thread when the game will not start', async () => {
+            session.client.startGame.mockReturnValue(false);
+
+            await launchGame(interaction, game, { reuse: true, threadId: 'saved-thread' });
+
+            expect(saved.delete).not.toHaveBeenCalled();
+        });
+    });
+
     it('should play in the thread when started inside one', async () => {
         interaction.channel = thread;
 

@@ -22,14 +22,61 @@ export function threadLifetimeMinutes() {
 }
 
 /**
+ * Make an archived thread usable again.
+ *
+ * @param {object} thread - The thread.
+ * @return {Promise<boolean>} False if it could not be reopened (for example it is locked).
+ */
+async function reopen(thread) {
+    if (!thread.archived) {
+        return true;
+    }
+    try {
+        await thread.setArchived(false);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Find an existing thread in the command's channel to play in, instead of making a new one: the
+ * thread a save was made in, else an open thread already named for this game and player. A thread
+ * that already has a game running is never reused.
+ *
+ * @param {object} interaction - The command interaction.
+ * @param {string} name - The name a new thread for this game and player would get.
+ * @param {string} [threadId] - The thread to prefer, such as the one a save was made in.
+ * @return {Promise<object|null>} The thread, or null if there is none to reuse.
+ */
+async function findReusableThread(interaction, name, threadId) {
+    const parent = interaction.channel;
+    const usable = (thread) =>
+        thread?.isThread?.() && thread.parentId === parent.id && !sessions.get(thread.id);
+
+    if (threadId) {
+        const thread = await interaction.guild?.channels.fetch(threadId).catch(() => null);
+        if (usable(thread) && (await reopen(thread))) {
+            return thread;
+        }
+    }
+
+    const active = await parent.threads.fetchActive().catch(() => null);
+    return active?.threads.find((thread) => thread.name === name && usable(thread)) ?? null;
+}
+
+/**
  * Start a game for a command. In a text channel a new thread is made for the game; in a thread the
  * game is played right there.
  *
  * @param {object} interaction - The command interaction.
  * @param {object} game - The game's entry from games.json.
+ * @param {object} [options]
+ * @param {boolean} [options.reuse] - Play in an existing thread of this channel if there is a matching one.
+ * @param {string} [options.threadId] - With `reuse`, the thread to prefer, such as the one a save was made in.
  * @return {Promise<{session: object}|{error: string}>} The running game, or why it could not start.
  */
-export async function launchGame(interaction, game) {
+export async function launchGame(interaction, game, { reuse = false, threadId } = {}) {
     let channel = interaction.channel;
 
     if (sessions.get(channel.id)) {
@@ -47,21 +94,31 @@ export async function launchGame(interaction, game) {
         }
 
         const player = interaction.member?.displayName ?? interaction.user.username;
-        try {
-            channel = await channel.threads.create({
-                name: `${game.name} - ${player}`.slice(0, MAX_THREAD_NAME_LENGTH),
-                type: ChannelType.PublicThread,
-                autoArchiveDuration: threadLifetimeMinutes(),
-                reason: `${player} started ${game.name}`,
-            });
-            createdThread = true;
-        } catch (error) {
-            Logger.log({
-                level: 'error',
-                message: `Could not create a thread for ${game.id}: ${error.message}`,
-                stack: error.stack,
-            });
-            return { error: 'I could not create a thread here. I need the Create Public Threads and Send Messages in Threads permissions.' };
+        const name = `${game.name} - ${player}`.slice(0, MAX_THREAD_NAME_LENGTH);
+
+        const existing = reuse
+            ? await findReusableThread(interaction, name, threadId)
+            : null;
+
+        if (existing) {
+            channel = existing;
+        } else {
+            try {
+                channel = await channel.threads.create({
+                    name,
+                    type: ChannelType.PublicThread,
+                    autoArchiveDuration: threadLifetimeMinutes(),
+                    reason: `${player} started ${game.name}`,
+                });
+                createdThread = true;
+            } catch (error) {
+                Logger.log({
+                    level: 'error',
+                    message: `Could not create a thread for ${game.id}: ${error.message}`,
+                    stack: error.stack,
+                });
+                return { error: 'I could not create a thread here. I need the Create Public Threads and Send Messages in Threads permissions.' };
+            }
         }
 
         // Make sure the player who started the game is in the thread

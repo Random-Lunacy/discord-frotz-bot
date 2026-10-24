@@ -88,9 +88,10 @@ async function getGamesWithSaves() {
  *
  * @param {string} gameId - The ID of the game to start
  * @param {Object} originalInteraction - The original command interaction, used for all updates
+ * @param {string} [savePath] - The save about to be restored; its thread is reused if it still exists
  * @return {Object|null} - The running game, or null if it could not be started
  */
-async function startGame(gameId, originalInteraction) {
+async function startGame(gameId, originalInteraction, savePath) {
     try {
         const gameObj = sharedData.gameList.games.find(
             (it) => it.id === gameId
@@ -104,7 +105,10 @@ async function startGame(gameId, originalInteraction) {
             return null;
         }
 
-        const result = await launchGame(originalInteraction, gameObj);
+        const result = await launchGame(originalInteraction, gameObj, {
+            reuse: true,
+            threadId: savePath ? parseSaveName(savePath)?.channelId : undefined,
+        });
         if (result.error) {
             await originalInteraction.editReply({
                 content: result.error,
@@ -196,7 +200,11 @@ async function invoke(interaction) {
             return;
         }
 
-        const started = await startGame(specifiedGameId, interaction);
+        const started = await startGame(
+            specifiedGameId,
+            interaction,
+            mostRecentSave
+        );
         if (started) {
             await restoreSaveFile(mostRecentSave, interaction, started);
         }
@@ -265,10 +273,10 @@ async function invoke(interaction) {
             }
 
             // Start the selected game using the original interaction for updates
-            const started = await startGame(selection, interaction);
+            const mostRecentSave = await findMostRecentSave(selection);
+            const started = await startGame(selection, interaction, mostRecentSave);
             if (started) {
-                // Game started, now find and restore the most recent save
-                const mostRecentSave = await findMostRecentSave(selection);
+                // Game started, now restore the most recent save
                 if (mostRecentSave) {
                     await restoreSaveFile(mostRecentSave, interaction, started);
                 } else {
