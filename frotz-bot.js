@@ -14,6 +14,13 @@ const client = new Client({
 
 sharedData.client = client;
 
+// The game can end on its own (for example when the player quits in-game)
+sharedData.gameClient.on('end', () => {
+    sharedData.gameActive = false;
+    sharedData.listenToGame = false;
+    sharedData.gameId = null;
+});
+
 // Fetch all js files in ./events
 const events = fs
     .readdirSync('./events')

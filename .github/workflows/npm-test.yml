@@ -9,6 +9,10 @@ jobs:
         name: Lint and Test (Node.js ${{ matrix.node-version }})
         runs-on: ubuntu-latest
 
+        defaults:
+            run:
+                working-directory: discord-frotz-bot
+
         strategy:
             matrix:
                 node-version: [22, 24]
@@ -16,11 +20,26 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  path: discord-frotz-bot
+
+            # rezrov-zmachine is referenced as file:../rezrov-zmachine and is not on npm yet
+            - name: Checkout rezrov-zmachine
+              uses: actions/checkout@v4
+              with:
+                  repository: Random-Lunacy/rezrov-zmachine
+                  path: rezrov-zmachine
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
+
+            - name: Build rezrov-zmachine
+              working-directory: rezrov-zmachine
+              run: |
+                  npm ci
+                  npm run build
 
             - name: Install dependencies
               run: npm ci
@@ -40,3 +59,5 @@ jobs:
             - name: Comment PR with coverage summary
               if: matrix.node-version == 24 # Only report coverage for the latest node version
               uses: davelosert/vitest-coverage-report-action@v2
+              with:
+                  working-directory: discord-frotz-bot

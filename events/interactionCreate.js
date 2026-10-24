@@ -18,7 +18,7 @@ async function invoke(interaction) {
         (await import(`#commands/${interaction.commandName}`)).invoke(interaction);
 }
 
-// Send command to dfrotz when a message is received if the game is active
+// Send the message to the game when a message is received if the game is active
 sharedData.client.on('messageCreate', (message) => {
     // Only process messages if we are actively playing and the message is sent in the game channel
     if (sharedData.gameActive && sharedData.listenToGame && message.channel.id === sharedData.channel.id) {
@@ -46,8 +46,8 @@ sharedData.client.on('messageCreate', (message) => {
             return;
         }
 
-        // Send message to dfrotz
-        sharedData.frotzClient.processInput(message.content);
+        // Send message to the game
+        sharedData.gameClient.processInput(message.content);
     }
 });
 

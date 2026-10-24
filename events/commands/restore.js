@@ -140,8 +140,8 @@ async function startGame(gameId, interaction, originalInteraction) {
             components: [],
         });
 
-        if (!sharedData.frotzClient.startGame(gameObj.file)) {
-            const errorMessage = sharedData.frotzClient.lastError.message;
+        if (!sharedData.gameClient.startGame(gameObj.file)) {
+            const errorMessage = sharedData.gameClient.lastError.message;
             await originalInteraction.editReply({
                 content: errorMessage,
                 components: [],
@@ -459,7 +459,7 @@ async function handleRestoreForActiveGame(interaction) {
                 .split('-');
             let restoredTime = new Date(parseInt(restoredFileFields[1] * 1000));
 
-            sharedData.frotzClient.restoreGame(savePath);
+            sharedData.gameClient.restoreGame(savePath);
 
             await interaction.editReply({
                 content: `Restoring ${displayName} with save from ${dateFormat(
@@ -527,7 +527,7 @@ async function restoreSaveFile(savePath, interaction) {
             (it) => it.id === sharedData.gameId
         ).name;
 
-        sharedData.frotzClient.restoreGame(savePath);
+        sharedData.gameClient.restoreGame(savePath);
 
         // Always use editReply on the original interaction
         await interaction.editReply({
