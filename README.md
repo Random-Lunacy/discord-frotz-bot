@@ -105,6 +105,9 @@ The bot is controlled with slash commands. Each game is played in its own thread
 
 Server admins are users with the **Manage Server** permission. Players leave a game themselves by typing `quit` in it.
 A game is also stopped if its thread is deleted or archived, and games do not survive a restart of the bot; saves do.
+Discord archives a thread after a period with no messages in it, whether or not the game is paused. The bot's threads
+last 7 days by default; set `THREAD_LIFETIME_DAYS` in `.env` to `1`, `3` or `7` to change that. Anything since the last
+save is lost when a game's thread is archived, so save before leaving a game for a long time.
 
 While a game is running, every message in its thread is sent to the game as a command, so the game's own
 `save`, `restore`, `undo` and `quit` commands all work.

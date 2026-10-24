@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockSessions = {
     get: vi.fn(),
@@ -13,9 +13,38 @@ vi.mock('discord.js', () => ({
     ChannelType: { PublicThread: 11 },
 }));
 
-const { launchGame } = await import('../launchGame.js');
+const { launchGame, threadLifetimeMinutes } = await import('../launchGame.js');
 
 const game = { id: 'zork1', name: 'Zork I', file: 'zork-i.z3' };
+
+describe('threadLifetimeMinutes', () => {
+    afterEach(() => {
+        delete process.env.THREAD_LIFETIME_DAYS;
+    });
+
+    it('should default to 7 days', () => {
+        expect(threadLifetimeMinutes()).toBe(10080);
+    });
+
+    it.each([
+        ['1', 1440],
+        ['3', 4320],
+        ['7', 10080],
+    ])('should give %s days as %i minutes', (days, minutes) => {
+        process.env.THREAD_LIFETIME_DAYS = days;
+
+        expect(threadLifetimeMinutes()).toBe(minutes);
+    });
+
+    it.each(['2', '14', '0', 'week', ''])(
+        'should fall back to 7 days for %j',
+        (days) => {
+            process.env.THREAD_LIFETIME_DAYS = days;
+
+            expect(threadLifetimeMinutes()).toBe(10080);
+        }
+    );
+});
 
 describe('launchGame', () => {
     let thread;
@@ -64,6 +93,19 @@ describe('launchGame', () => {
         });
         expect(session.client.startGame).toHaveBeenCalledWith('zork-i.z3');
         expect(result).toEqual({ session });
+    });
+
+    it('should close the thread after the configured lifetime', async () => {
+        process.env.THREAD_LIFETIME_DAYS = '3';
+        try {
+            await launchGame(interaction, game);
+        } finally {
+            delete process.env.THREAD_LIFETIME_DAYS;
+        }
+
+        expect(textChannel.threads.create).toHaveBeenCalledWith(
+            expect.objectContaining({ autoArchiveDuration: 4320 })
+        );
     });
 
     it('should play in the thread when started inside one', async () => {
