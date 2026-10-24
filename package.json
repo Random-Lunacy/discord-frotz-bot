@@ -5,8 +5,8 @@
     "main": "frotz-bot.js",
     "scripts": {
         "start": "node ./frotz-bot.js",
-        "lint": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js",
-        "lint-fix": "node_modules/.bin/eslint ./*.js events/*.js events/**/*.js --fix",
+        "lint": "node_modules/.bin/eslint ./*.js events tests",
+        "lint-fix": "node_modules/.bin/eslint ./*.js events tests --fix",
         "test": "vitest run",
         "test:watch": "vitest",
         "coverage": "vitest run --coverage"
