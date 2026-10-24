@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { Logger } from '../logger.js';
+import { startIdleSweep } from '../idleSweep.js';
 
 const once = true;
 const name = 'ready';
@@ -26,6 +27,8 @@ async function invoke(client) {
     }
 
     client.application.commands.set(commandsArray);
+
+    startIdleSweep();
 
     Logger.log({
         level: 'info',

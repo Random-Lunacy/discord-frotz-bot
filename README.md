@@ -114,6 +114,10 @@ archived (by Discord or by someone closing it) the bot saves the game first, qui
 the `restore` list, and then stops it. If a game cannot be saved (for example it is not responding), it is stopped without a
 save, so save before leaving a game for a long time.
 
+A game that goes without a player message (or a `/pause` or `/restore`) for `IDLE_TIMEOUT_MINUTES` (60 by default, `0`
+to turn it off) is saved as an `autosave` and shut down to free resources. The thread stays open and the bot says so
+there; use `/restore` in the thread to resume from the autosave. A paused game counts as idle.
+
 While a game is running, every message in its thread is sent to the game as a command, so the game's own
 `save`, `restore`, `undo` and `quit` commands all work.
 

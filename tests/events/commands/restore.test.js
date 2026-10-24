@@ -47,6 +47,7 @@ describe('restore command used in a thread', () => {
         session = {
             game,
             channel: { id: 't1' },
+            touch: vi.fn(),
             client: {
                 whenReady: vi.fn().mockResolvedValue(true),
                 restoreGame: vi.fn(),

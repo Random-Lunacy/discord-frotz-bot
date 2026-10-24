@@ -15,6 +15,7 @@ const pauseCommandPath = path.resolve(
 // The game running in the channel the command is used in
 const mockSession = {
     paused: false,
+    touch: vi.fn(),
     game: { id: 'test-game', name: 'Test Game' },
 };
 const mockSessions = { get: vi.fn() };
@@ -119,6 +120,8 @@ describe('pause command', () => {
         // Verify that the game was paused
         expect(mockSessions.get).toHaveBeenCalledWith('channel-1');
         expect(mockSession.paused).toBe(true);
+        // Pausing counts as activity, so the game isn't shut down as idle straight away
+        expect(mockSession.touch).toHaveBeenCalled();
 
         // Verify that the confirmation was updated with the proper message
         expect(mockConfirmation.update).toHaveBeenCalledWith(

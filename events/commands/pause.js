@@ -77,6 +77,7 @@ async function invoke(interaction) {
 
         if (confirmation.customId === 'confirm') {
             session.paused = !session.paused;
+            session.touch();
 
             await confirmation.update({
                 content: responseMessage + ' ' + gameName + '.',
