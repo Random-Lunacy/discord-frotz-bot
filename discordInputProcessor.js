@@ -5,9 +5,16 @@ import { BaseInputProcessor } from 'rezrov-zmachine';
  * input; `submit()` supplies a line of text and resumes it.
  */
 export class DiscordInputProcessor extends BaseInputProcessor {
-    constructor(screen) {
+    /**
+     * @param {DiscordScreen} screen - Screen whose output is flushed when input is wanted.
+     * @param {object} prompts - Asks the player for a filename when the game saves or restores.
+     * @param {function(): Promise<string>} prompts.save
+     * @param {function(): Promise<string>} prompts.restore
+     */
+    constructor(screen, prompts) {
         super();
         this.screen = screen;
+        this.prompts = prompts;
         this.machine = null;
         this.waiting = false;
         this.charMode = false;
@@ -47,7 +54,7 @@ export class DiscordInputProcessor extends BaseInputProcessor {
     }
 
     /**
-     * Queue the filename the game's next save/restore prompt will receive.
+     * Use this filename for the game's next save/restore prompt instead of asking the player.
      *
      * @param {string} path - Full path of the save file.
      */
@@ -55,9 +62,15 @@ export class DiscordInputProcessor extends BaseInputProcessor {
         this.pendingFilename = path;
     }
 
-    async promptForFilename() {
-        const filename = this.pendingFilename;
-        this.pendingFilename = null;
-        return filename ?? '';
+    async promptForFilename(machine, operation) {
+        if (this.pendingFilename) {
+            const filename = this.pendingFilename;
+            this.pendingFilename = null;
+            return filename;
+        }
+
+        return operation === 'save'
+            ? this.prompts.save()
+            : this.prompts.restore();
     }
 }

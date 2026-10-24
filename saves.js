@@ -1,0 +1,113 @@
+// Save file naming and lookup.
+//
+// Save files are named <game>-<channel>-<user>-<time>[-<label>].qzl
+//   game     game ID from games.json (letters and numbers only)
+//   channel  Discord channel ID the game was played in
+//   user     Discord user ID of the player who saved
+//   time     Unix time (seconds) of the save
+//   label    optional name given by the player (a-z, 0-9 and _)
+//
+// Saves made before channel and label were added are named <game>-<time>-<user>.qzl
+import fs from 'fs';
+import path from 'path';
+
+const EXTENSION = '.qzl';
+const MAX_LABEL_LENGTH = 32;
+
+/**
+ * Reduce free text to a safe label for use in a file name.
+ *
+ * @param {string} text - Text typed by the player.
+ * @return {string} Lower case letters, numbers and underscores, or '' if nothing usable remains.
+ */
+export function sanitizeLabel(text) {
+    return String(text ?? '')
+        .toLowerCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .slice(0, MAX_LABEL_LENGTH);
+}
+
+/**
+ * Build the file name for a save.
+ *
+ * @param {object} save - Details of the save.
+ * @param {string} save.gameId - Game ID.
+ * @param {string} save.channelId - Channel the game is being played in.
+ * @param {string} save.userId - User who is saving.
+ * @param {number} save.time - Unix time in seconds.
+ * @param {string} [save.label] - Optional name for the save.
+ * @return {string} The file name (without folder).
+ */
+export function buildSaveName({ gameId, channelId, userId, time, label }) {
+    const fields = [gameId, channelId, userId, time];
+    const safeLabel = sanitizeLabel(label);
+    if (safeLabel) {
+        fields.push(safeLabel);
+    }
+    return fields.join('-') + EXTENSION;
+}
+
+/**
+ * Parse a save file name.
+ *
+ * @param {string} file - File name or path.
+ * @return {object|null} The parts of the name, or null if it is not a save file.
+ */
+export function parseSaveName(file) {
+    const name = path.basename(file);
+    if (!name.endsWith(EXTENSION)) {
+        return null;
+    }
+
+    const fields = name.slice(0, -EXTENSION.length).split('-');
+
+    // <game>-<time>-<user> from before channel and label were added
+    if (fields.length === 3 && /^\d{1,11}$/.test(fields[1])) {
+        return {
+            gameId: fields[0],
+            channelId: null,
+            userId: fields[2],
+            time: parseInt(fields[1], 10),
+            label: '',
+        };
+    }
+
+    if (fields.length >= 4 && fields.length <= 5 && /^\d{1,11}$/.test(fields[3])) {
+        return {
+            gameId: fields[0],
+            channelId: fields[1],
+            userId: fields[2],
+            time: parseInt(fields[3], 10),
+            label: fields[4] ?? '',
+        };
+    }
+
+    return null;
+}
+
+/**
+ * List the saves for a game, newest first.
+ *
+ * @param {string} folder - Folder the saves are kept in.
+ * @param {string} gameId - Game ID.
+ * @return {object[]} Parsed saves, each with the full `path` added.
+ */
+export function listSaves(folder, gameId) {
+    let files;
+    try {
+        files = fs.readdirSync(folder);
+    } catch {
+        return [];
+    }
+
+    return files
+        .map((file) => {
+            const parsed = parseSaveName(file);
+            return parsed ? { ...parsed, path: `${folder}/${file}` } : null;
+        })
+        .filter((save) => save && save.gameId === gameId)
+        .sort((a, b) => b.time - a.time);
+}

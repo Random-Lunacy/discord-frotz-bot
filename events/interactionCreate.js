@@ -18,7 +18,7 @@ async function invoke(interaction) {
         (await import(`#commands/${interaction.commandName}`)).invoke(interaction);
 }
 
-// Send the message to the game when a message is received if the game is active
+// Send messages to the game when a message is received if the game is active
 sharedData.client.on('messageCreate', (message) => {
     // Only process messages if we are actively playing and the message is sent in the game channel
     if (sharedData.gameActive && sharedData.listenToGame && message.channel.id === sharedData.channel.id) {
@@ -28,26 +28,7 @@ sharedData.client.on('messageCreate', (message) => {
             return;
         }
 
-        // disable save in favor of the slash command
-        if (message.content.match(/^(save)/i)) {
-            sharedData.channel.send('Use `/save` to save the game.');
-            return;
-        }
-
-        // disable restore in favor of the slash command
-        if (message.content.match(/^(restore)/i)) {
-            sharedData.channel.send('Use `/restore` to restore a saved game.');
-            return;
-        }
-
-        // disable quit in favor of the slash command
-        if (message.content.match(/^(quit)/i) || message.content.match(/^(q)/i)) {
-            sharedData.channel.send('Use `/quit` to exit the game.');
-            return;
-        }
-
-        // Send message to the game
-        sharedData.gameClient.processInput(message.content);
+        sharedData.gameClient.handleMessage(message);
     }
 });
 

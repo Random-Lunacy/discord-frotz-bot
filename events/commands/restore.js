@@ -6,9 +6,8 @@ import {
     ComponentType,
 } from 'discord.js';
 import { sharedData } from '../../sharedData.js';
-import { glob } from 'glob';
 import dateFormat from 'dateformat';
-import path from 'path';
+import { listSaves, parseSaveName } from '../../saves.js';
 
 import { Logger } from '../../logger.js';
 
@@ -52,32 +51,7 @@ const create = () => {
  * @return {string|null} - Path to the most recent save file or null if none found
  */
 async function findMostRecentSave(gameId) {
-    try {
-        const qzlFiles = await glob(
-            sharedData.gameFolder + '/' + gameId + '-*.qzl',
-            { nodir: true }
-        );
-
-        if (qzlFiles.length === 0) {
-            return null;
-        }
-
-        // Sort files by timestamp (which is the second part of the filename)
-        qzlFiles.sort((a, b) => {
-            const timeA = parseInt(a.split('-')[1]);
-            const timeB = parseInt(b.split('-')[1]);
-            return timeB - timeA; // Sort descending (newest first)
-        });
-
-        return qzlFiles[0]; // Return the most recent save
-    } catch (error) {
-        Logger.log({
-            level: 'error',
-            message: `Error finding most recent save: ${error.message}`,
-            stack: error.stack,
-        });
-        return null;
-    }
+    return listSaves(sharedData.gameFolder, gameId)[0]?.path ?? null;
 }
 
 /**
@@ -383,11 +357,12 @@ async function handleRestoreForActiveGame(interaction) {
         (it) => it.id === sharedData.gameId
     ).name;
 
-    const qzlFiles = await glob(
-        sharedData.gameFolder + '/' + sharedData.gameId + '-*.qzl',
-        { nodir: true }
+    // A select menu holds 25 options and one is Cancel
+    const saves = listSaves(sharedData.gameFolder, sharedData.gameId).slice(
+        0,
+        24
     );
-    if (qzlFiles.length === 0) {
+    if (saves.length === 0) {
         await interaction.editReply({
             content: 'No saved games found for ' + displayName + '.',
             components: [],
@@ -399,14 +374,16 @@ async function handleRestoreForActiveGame(interaction) {
         .setCustomId('save-select')
         .setPlaceholder('Choose a save file');
 
-    qzlFiles.forEach((file) => {
-        let fileFields = file.substring(0, file.length - 4).split('-');
-        let saveTime = new Date(parseInt(fileFields[1] * 1000));
+    saves.forEach((save) => {
+        const saveTime = new Date(save.time * 1000);
+        const user =
+            sharedData.client.users.cache.get(save.userId)?.globalName ??
+            save.userId;
         select.addOptions(
             new StringSelectMenuOptionBuilder()
                 .setLabel(
-                    sharedData.client.users.cache.get(fileFields[2])
-                        ?.globalName +
+                    (save.label ? save.label + ' - ' : '') +
+                        user +
                         ': ' +
                         dateFormat(saveTime, 'default')
                 )
@@ -414,7 +391,7 @@ async function handleRestoreForActiveGame(interaction) {
                     'Created on ' +
                         dateFormat(saveTime, 'dddd, mmmm dS, yyyy, h:MM:ss TT')
                 )
-                .setValue(file)
+                .setValue(save.path)
         );
     });
 
@@ -453,11 +430,7 @@ async function handleRestoreForActiveGame(interaction) {
 
             // Use the original interaction for response updates
             let savePath = selection;
-            let filename = path.basename(savePath);
-            let restoredFileFields = filename
-                .substring(0, filename.length - 4)
-                .split('-');
-            let restoredTime = new Date(parseInt(restoredFileFields[1] * 1000));
+            let restoredTime = new Date(parseSaveName(savePath).time * 1000);
 
             sharedData.gameClient.restoreGame(savePath);
 
@@ -517,11 +490,7 @@ async function handleRestoreForActiveGame(interaction) {
  */
 async function restoreSaveFile(savePath, interaction) {
     try {
-        let filename = path.basename(savePath);
-        let restoredFileFields = filename
-            .substring(0, filename.length - 4)
-            .split('-');
-        let restoredTime = new Date(parseInt(restoredFileFields[1] * 1000));
+        let restoredTime = new Date(parseSaveName(savePath).time * 1000);
 
         const displayName = sharedData.gameList.games.find(
             (it) => it.id === sharedData.gameId
