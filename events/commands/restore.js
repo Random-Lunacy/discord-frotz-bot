@@ -9,7 +9,12 @@ import { sharedData } from '../../sharedData.js';
 import { sessions } from '../../sessions.js';
 import { launchGame } from '../../launchGame.js';
 import dateFormat from 'dateformat';
-import { listSaves, parseSaveName } from '../../saves.js';
+import {
+    gameForChannel,
+    listSaves,
+    parseSaveName,
+    preferChannel,
+} from '../../saves.js';
 
 import { Logger } from '../../logger.js';
 
@@ -50,10 +55,12 @@ const create = () => {
  * Find the most recent save file for a given game ID
  *
  * @param {string} gameId - The ID of the game to find saves for
+ * @param {string} [channelId] - Prefer a save made in this channel or thread
  * @return {string|null} - Path to the most recent save file or null if none found
  */
-async function findMostRecentSave(gameId) {
-    return listSaves(sharedData.gameFolder, gameId)[0]?.path ?? null;
+async function findMostRecentSave(gameId, channelId) {
+    const saves = listSaves(sharedData.gameFolder, gameId);
+    return preferChannel(saves, channelId)[0]?.path ?? null;
 }
 
 /**
@@ -61,12 +68,12 @@ async function findMostRecentSave(gameId) {
  *
  * @return {Array} - Array of game objects that have saves
  */
-async function getGamesWithSaves() {
+async function getGamesWithSaves(channelId) {
     try {
         const gamesWithSaves = [];
 
         for (const game of sharedData.gameList.games) {
-            const saveExists = await findMostRecentSave(game.id);
+            const saveExists = await findMostRecentSave(game.id, channelId);
             if (saveExists) {
                 gamesWithSaves.push(game);
             }
@@ -155,8 +162,18 @@ async function invoke(interaction) {
     await interaction.deferReply();
 
     // If game ID is specified but a game is already running, provide helpful feedback
-    const specifiedGameId = interaction.options.getString('game');
+    let specifiedGameId = interaction.options.getString('game');
     const session = sessions.get(interaction.channel.id);
+
+    // In a thread with no game running, restore the game the thread was for rather than asking
+    if (!session && !specifiedGameId && interaction.channel.isThread?.()) {
+        specifiedGameId =
+            gameForChannel(
+                sharedData.gameFolder,
+                sharedData.gameList.games,
+                interaction.channel
+            )?.id ?? null;
+    }
     if (session && specifiedGameId) {
         await interaction.editReply({
             content:
@@ -191,7 +208,10 @@ async function invoke(interaction) {
         }
 
         // Game ID specified, check if it has saves
-        const mostRecentSave = await findMostRecentSave(specifiedGameId);
+        const mostRecentSave = await findMostRecentSave(
+            specifiedGameId,
+            interaction.channel.id
+        );
         if (!mostRecentSave) {
             await interaction.editReply({
                 content: `No saved games found for "${gameObj.name}". Use /start to start a new game.`,
@@ -212,7 +232,7 @@ async function invoke(interaction) {
     }
 
     // No game specified, show list of games that have saves
-    const gamesWithSaves = await getGamesWithSaves();
+    const gamesWithSaves = await getGamesWithSaves(interaction.channel.id);
 
     if (gamesWithSaves.length === 0) {
         await interaction.editReply({
@@ -273,7 +293,10 @@ async function invoke(interaction) {
             }
 
             // Start the selected game using the original interaction for updates
-            const mostRecentSave = await findMostRecentSave(selection);
+            const mostRecentSave = await findMostRecentSave(
+                selection,
+                interaction.channel.id
+            );
             const started = await startGame(selection, interaction, mostRecentSave);
             if (started) {
                 // Game started, now restore the most recent save
@@ -328,10 +351,10 @@ async function handleRestoreForActiveGame(interaction, session) {
     const displayName = session.game.name;
 
     // A select menu holds 25 options and one is Cancel
-    const saves = listSaves(sharedData.gameFolder, session.game.id).slice(
-        0,
-        24
-    );
+    const saves = preferChannel(
+        listSaves(sharedData.gameFolder, session.game.id),
+        interaction.channel.id
+    ).slice(0, 24);
     if (saves.length === 0) {
         await interaction.editReply({
             content: 'No saved games found for ' + displayName + '.',

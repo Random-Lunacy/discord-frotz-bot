@@ -18,6 +18,7 @@ import {
     DEFAULT_LABEL_TEMPLATE,
     expandLabelTemplate,
     listSaves,
+    preferChannel,
     sanitizeLabel,
 } from './saves.js';
 
@@ -494,10 +495,11 @@ export class ZMachineClient extends EventEmitter {
      */
     async promptRestoreName() {
         const userId = this.lastUserId;
-        const saves = listSaves(sharedData.gameFolder, this.gameId).slice(
-            0,
-            MAX_RESTORE_CHOICES
-        );
+        // Saves made in this thread come first
+        const saves = preferChannel(
+            listSaves(sharedData.gameFolder, this.gameId),
+            this.channel.id
+        ).slice(0, MAX_RESTORE_CHOICES);
 
         if (saves.length === 0) {
             this.say('There are no saves for this game.');

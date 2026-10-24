@@ -138,3 +138,48 @@ export function listSaves(folder, gameId) {
         .filter((save) => save && save.gameId === gameId)
         .sort((a, b) => b.time - a.time);
 }
+
+/**
+ * Put the saves made in a channel or thread ahead of the rest, keeping each group newest first.
+ *
+ * @param {object[]} saves - Saves from listSaves.
+ * @param {string} channelId - The channel or thread to favour.
+ * @return {object[]} A new list.
+ */
+export function preferChannel(saves, channelId) {
+    return [
+        ...saves.filter((save) => save.channelId === channelId),
+        ...saves.filter((save) => save.channelId !== channelId),
+    ];
+}
+
+/**
+ * Work out which game a thread is for: the game of the newest save made in it, else the game its
+ * name starts with ("<game name> - <player>", as the bot names threads).
+ *
+ * @param {string} folder - Folder the saves are kept in.
+ * @param {object[]} games - The games from games.json.
+ * @param {object} channel - The thread (needs `id` and `name`).
+ * @return {object|null} The game, or null if it cannot be told.
+ */
+export function gameForChannel(folder, games, channel) {
+    let newest = null;
+    for (const game of games) {
+        const save = listSaves(folder, game.id).find(
+            (it) => it.channelId === channel.id
+        );
+        if (save && (!newest || save.time > newest.save.time)) {
+            newest = { game, save };
+        }
+    }
+    if (newest) {
+        return newest.game;
+    }
+
+    // Longest name first, so "Zork II" is not mistaken for a game called "Zork"
+    return (
+        [...games]
+            .sort((a, b) => b.name.length - a.name.length)
+            .find((game) => channel.name?.startsWith(`${game.name} - `)) ?? null
+    );
+}

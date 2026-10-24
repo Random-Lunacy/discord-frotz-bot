@@ -97,7 +97,7 @@ The bot is controlled with slash commands. Each game is played in its own thread
 | ------------------ | ------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | `/games`           | Anyone       | List the available games.                                                                                                   |
 | `/start`           | Anyone       | Start a game. In a text channel it is played in your existing thread for that game (reopened if archived), or a new thread; used inside a thread, the game is played there. |
-| `/restore`         | Anyone       | Choose a save to restore. In a thread with a game running it restores into that game; in a text channel it starts the game again in the thread the save was made in (reopening it if archived), or in a new thread if that one is gone. |
+| `/restore`         | Anyone       | Restore a game. In a thread with a game running, pick a save to restore into it. In a thread with no game running, restore the game the thread was for (the game of its saves, else the game in its name), using the newest save made in that thread. In a text channel, pick a game and its newest save is restored in your thread for it. |
 | `/pause`           | Anyone       | Pause or resume the game in this thread (the bot stops or starts listening to messages).                                    |
 | `/status`          | Anyone       | Show the game in this thread. Server admins also see every game in progress, with who started it, when, and when it was last played. |
 | `/status all:True` | Server admin | Show only the list of every game in progress.                                                                               |
@@ -122,7 +122,7 @@ While a game is running, every message in its thread is sent to the game as a co
     player's reply is used; other messages are ignored until they answer or the time runs out. Anyone in the thread
     can save. The default name is `<user>_<date>_<time>`, which you can change with `DEFAULT_SAVE_NAME` in `.env`
     using the placeholders `{game}`, `{user}`, `{channel}`, `{date}` and `{time}`.
--   **Restoring:** type `restore`. The bot lists the most recent saves for the running game, and only the player who
+-   **Restoring:** type `restore`. The bot lists the most recent saves for the running game, those made in this thread first, and only the player who
     typed `restore` can choose one (reply with a number, `latest` or `cancel`).
 -   **Quitting:** type `quit` and answer the game's own confirmation. The bot notices when the game ends.
 
