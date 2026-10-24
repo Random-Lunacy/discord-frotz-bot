@@ -12,16 +12,18 @@ vi.mock('../sharedData.js', () => ({
         get gameFolder() {
             return state.gameFolder;
         },
-        gameId: 'zork1',
-        channel: {
-            id: '555',
-            send: vi.fn().mockResolvedValue({}),
-        },
     },
 }));
 
-import { GameClient } from '../zmachineClient.js';
-import { sharedData } from '../sharedData.js';
+const channel = {
+    id: '555',
+    name: 'frotz-dev',
+    send: vi.fn().mockResolvedValue({}),
+};
+
+import { ZMachineClient } from '../zmachineClient.js';
+
+let GameClient;
 
 const hasZork = fs.existsSync(`${gameFolder}/zork-i.z3`);
 const message = (content, userId = 'u1') => ({
@@ -29,7 +31,7 @@ const message = (content, userId = 'u1') => ({
     author: { id: userId },
 });
 const sentText = () =>
-    sharedData.channel.send.mock.calls.map(([sent]) =>
+    channel.send.mock.calls.map(([sent]) =>
         typeof sent === 'string' ? sent : sent.content
     );
 const tick = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -37,7 +39,11 @@ const tick = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
 describe('ZMachineClient', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        GameClient.removeAllListeners();
+        GameClient = new ZMachineClient({
+            channel,
+            gameId: 'zork1',
+            gameName: 'Zork I',
+        });
         state.gameFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'games-'));
         if (hasZork) {
             fs.copyFileSync(
@@ -85,7 +91,7 @@ describe('ZMachineClient', () => {
             expect(GameClient.startGame('zork-i.z3')).toBe(true);
             await tick();
 
-            const sent = sharedData.channel.send.mock.calls[0][0];
+            const sent = channel.send.mock.calls[0][0];
             expect(sent).toContain('ZORK I: The Great Underground Empire');
             expect(sent).toContain('West of House');
             expect(sent.trimEnd().endsWith('>')).toBe(false);
@@ -94,12 +100,12 @@ describe('ZMachineClient', () => {
         it('should respond to commands', async () => {
             GameClient.startGame('zork-i.z3');
             await tick();
-            sharedData.channel.send.mockClear();
+            channel.send.mockClear();
 
             expect(GameClient.processInput('open mailbox')).toBe(true);
             await tick();
 
-            expect(sharedData.channel.send.mock.calls[0][0]).toContain(
+            expect(channel.send.mock.calls[0][0]).toContain(
                 'Opening the small mailbox reveals a leaflet.'
             );
         });
@@ -109,13 +115,47 @@ describe('ZMachineClient', () => {
             GameClient.on('end', onEnd);
             GameClient.startGame('zork-i.z3');
             await tick();
-            sharedData.channel.send.mockClear();
+            channel.send.mockClear();
 
             GameClient.stopGame();
             await tick();
 
             expect(onEnd).not.toHaveBeenCalled();
             expect(sentText().join('\n')).not.toContain('has ended');
+        });
+
+        it('should run several games at once without them affecting each other', async () => {
+            const otherChannel = {
+                id: '777',
+                send: vi.fn().mockResolvedValue({}),
+            };
+            const other = new ZMachineClient({
+                channel: otherChannel,
+                gameId: 'zork1',
+                gameName: 'Zork I',
+            });
+
+            try {
+                GameClient.startGame('zork-i.z3');
+                other.startGame('zork-i.z3');
+                await tick();
+                channel.send.mockClear();
+                otherChannel.send.mockClear();
+
+                // The first game moves north; the second stays put and looks around
+                GameClient.processInput('north');
+                await tick();
+                other.processInput('look');
+                await tick();
+
+                const first = channel.send.mock.calls.map(([m]) => m).join('\n');
+                const second = otherChannel.send.mock.calls.map(([m]) => m).join('\n');
+                expect(first).toContain('North of House');
+                expect(second).toContain('West of House');
+                expect(second).not.toContain('North of House');
+            } finally {
+                other.stopGame();
+            }
         });
 
         it('should emit end when the game quits', async () => {
@@ -151,7 +191,7 @@ describe('ZMachineClient', () => {
                 GameClient.startGame('zork-i.z3');
                 await tick();
                 await play('open mailbox', 'north', 'east');
-                sharedData.channel.send.mockClear();
+                channel.send.mockClear();
             });
 
             it('should save under a structured name using the label the saver gives', async () => {
@@ -224,7 +264,7 @@ describe('ZMachineClient', () => {
             it('should offer this game\'s saves and restore the one chosen', async () => {
                 await play('save', 'behind house');
                 await play('west', 'inventory');
-                sharedData.channel.send.mockClear();
+                channel.send.mockClear();
 
                 await play('restore');
                 const listing = sentText().join('\n');
@@ -240,7 +280,7 @@ describe('ZMachineClient', () => {
             it('should only take the restore choice from the player who typed restore', async () => {
                 await play('save', 'skip');
                 await play('west');
-                sharedData.channel.send.mockClear();
+                channel.send.mockClear();
 
                 await play('restore');
                 GameClient.handleMessage(message('1', 'u2'));

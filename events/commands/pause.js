@@ -7,7 +7,7 @@ import {
 } from 'discord.js';
 
 // Import the shared data object
-import { sharedData } from '../../sharedData.js';
+import { sessions } from '../../sessions.js';
 
 /**
  * Creates a new slash command for pausing or unpausing the game.
@@ -18,7 +18,7 @@ const create = () => {
     const command = new SlashCommandBuilder()
         .setName('pause')
         .setDescription(
-            'Pause or unpause the game (toggles whether the bot will listen to messages).'
+            'Pause or unpause the game in this channel (toggles whether the bot will listen to messages).'
         );
 
     return command.toJSON();
@@ -30,7 +30,8 @@ const create = () => {
  * @param {Object} interaction - The interaction object.
  */
 async function invoke(interaction) {
-    if (!sharedData.gameActive) {
+    const session = sessions.get(interaction.channel.id);
+    if (!session) {
         interaction.reply({
             content: 'No game is currently running.',
             flags: MessageFlags.Ephemeral,
@@ -41,16 +42,14 @@ async function invoke(interaction) {
     let confirmMessage =
         'Are you sure you want to pause the game? The game will stop listening to messages while paused.';
     let responseMessage = 'Game paused.';
-    if (!sharedData.listenToGame) {
+    if (session.paused) {
         confirmButtonText = 'Unpause Game';
         confirmMessage =
             'Are you sure you want to unpause the game? The game will resume listening to messages.';
         responseMessage = 'Game unpaused.';
     }
 
-    let gameName = sharedData.gameList.games.filter(
-        (it) => it.id === sharedData.gameId
-    )[0].name;
+    let gameName = session.game.name;
 
     const confirm = new ButtonBuilder()
         .setCustomId('confirm')
@@ -77,10 +76,10 @@ async function invoke(interaction) {
         });
 
         if (confirmation.customId === 'confirm') {
-            sharedData.listenToGame = !sharedData.listenToGame;
+            session.paused = !session.paused;
 
             await confirmation.update({
-                content: responseMessage + gameName + '.',
+                content: responseMessage + ' ' + gameName + '.',
                 components: [],
             });
         } else if (confirmation.customId === 'cancel') {

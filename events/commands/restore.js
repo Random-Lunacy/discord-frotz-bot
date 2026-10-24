@@ -6,6 +6,8 @@ import {
     ComponentType,
 } from 'discord.js';
 import { sharedData } from '../../sharedData.js';
+import { sessions } from '../../sessions.js';
+import { launchGame } from '../../launchGame.js';
 import dateFormat from 'dateformat';
 import { listSaves, parseSaveName } from '../../saves.js';
 
@@ -82,52 +84,41 @@ async function getGamesWithSaves() {
 }
 
 /**
- * Start a game with the specified ID
+ * Start a game with the specified ID, in a new thread if the command was used in a text channel
  *
  * @param {string} gameId - The ID of the game to start
- * @param {Object} interaction - The Discord interaction object
- * @param {Object} originalInteraction - The original command interaction for fallback
- * @return {boolean} - Whether the game started successfully
+ * @param {Object} originalInteraction - The original command interaction, used for all updates
+ * @return {Object|null} - The running game, or null if it could not be started
  */
-async function startGame(gameId, interaction, originalInteraction) {
+async function startGame(gameId, originalInteraction) {
     try {
         const gameObj = sharedData.gameList.games.find(
             (it) => it.id === gameId
         );
 
         if (!gameObj) {
-            // Use the original interaction since the component interaction is already handled
             await originalInteraction.editReply({
                 content: `Could not find game with ID "${gameId}".`,
                 components: [],
             });
-            return false;
+            return null;
         }
 
-        if (sharedData.channel === null) {
-            sharedData.channel = originalInteraction.channel;
+        const result = await launchGame(originalInteraction, gameObj);
+        if (result.error) {
+            await originalInteraction.editReply({
+                content: result.error,
+                components: [],
+            });
+            return null;
         }
 
-        // Use the original interaction for all updates
         await originalInteraction.editReply({
-            content: `Starting ${gameObj.name} in <#${sharedData.channel.id}>...`,
+            content: `Starting ${gameObj.name} in <#${result.session.channel.id}>...`,
             components: [],
         });
 
-        if (!sharedData.gameClient.startGame(gameObj.file)) {
-            const errorMessage = sharedData.gameClient.lastError.message;
-            await originalInteraction.editReply({
-                content: errorMessage,
-                components: [],
-            });
-            return false;
-        }
-
-        sharedData.gameId = gameId;
-        sharedData.gameActive = true;
-        sharedData.listenToGame = true;
-
-        return true;
+        return result.session;
     } catch (error) {
         Logger.log({
             level: 'error',
@@ -136,7 +127,6 @@ async function startGame(gameId, interaction, originalInteraction) {
         });
 
         try {
-            // Always use the original interaction for responses
             await originalInteraction.editReply({
                 content: `An error occurred while starting the game: ${error.message}`,
                 components: [],
@@ -148,7 +138,7 @@ async function startGame(gameId, interaction, originalInteraction) {
                 stack: responseError.stack,
             });
         }
-        return false;
+        return null;
     }
 }
 
@@ -162,22 +152,23 @@ async function invoke(interaction) {
 
     // If game ID is specified but a game is already running, provide helpful feedback
     const specifiedGameId = interaction.options.getString('game');
-    if (sharedData.gameActive && specifiedGameId) {
+    const session = sessions.get(interaction.channel.id);
+    if (session && specifiedGameId) {
         await interaction.editReply({
             content:
-                'A game is already running. The game parameter is ignored. Use `/quit` first if you want to switch games.',
+                'A game is already running here, so the game parameter is ignored. To play a different game, use `/restore` in another channel.',
             components: [],
         });
 
         // Short delay before showing the save selection
         setTimeout(async () => {
-            await handleRestoreForActiveGame(interaction);
+            await handleRestoreForActiveGame(interaction, session);
         }, 2000);
         return;
     }
 
-    if (sharedData.gameActive) {
-        await handleRestoreForActiveGame(interaction);
+    if (session) {
+        await handleRestoreForActiveGame(interaction, session);
         return;
     }
 
@@ -205,18 +196,9 @@ async function invoke(interaction) {
             return;
         }
 
-        // Start the specified game - pass the interaction as both parameters
-        const success = await startGame(
-            specifiedGameId,
-            interaction,
-            interaction
-        );
-        if (success) {
-            // Game started, now restore the save
-            // Add a small delay to ensure the game is fully started
-            setTimeout(async () => {
-                await restoreSaveFile(mostRecentSave, interaction);
-            }, 1500);
+        const started = await startGame(specifiedGameId, interaction);
+        if (started) {
+            await restoreSaveFile(mostRecentSave, interaction, started);
         }
         return;
     }
@@ -283,34 +265,15 @@ async function invoke(interaction) {
             }
 
             // Start the selected game using the original interaction for updates
-            const success = await startGame(selection, i, interaction);
-            if (success) {
+            const started = await startGame(selection, interaction);
+            if (started) {
                 // Game started, now find and restore the most recent save
                 const mostRecentSave = await findMostRecentSave(selection);
                 if (mostRecentSave) {
-                    // Add a small delay to ensure the game is fully started
-                    setTimeout(async () => {
-                        try {
-                            await restoreSaveFile(mostRecentSave, interaction);
-                        } catch (restoreError) {
-                            Logger.log({
-                                level: 'error',
-                                message: `Error in delayed restore: ${restoreError.message}`,
-                                stack: restoreError.stack,
-                            });
-                            await interaction.editReply({
-                                content: `Started the game but encountered an error restoring the save: ${restoreError.message}`,
-                                components: [],
-                            });
-                        }
-                    }, 1500);
+                    await restoreSaveFile(mostRecentSave, interaction, started);
                 } else {
                     await interaction.editReply({
-                        content: `Started ${
-                            sharedData.gameList.games.find(
-                                (game) => game.id === selection
-                            ).name
-                        }, but couldn't find a save file to restore.`,
+                        content: `Started ${started.game.name}, but couldn't find a save file to restore.`,
                         components: [],
                     });
                 }
@@ -351,14 +314,13 @@ async function invoke(interaction) {
  * Handle restore for an active game
  *
  * @param {Object} interaction - The Discord interaction object
+ * @param {Object} session - The game running in this channel
  */
-async function handleRestoreForActiveGame(interaction) {
-    const displayName = sharedData.gameList.games.find(
-        (it) => it.id === sharedData.gameId
-    ).name;
+async function handleRestoreForActiveGame(interaction, session) {
+    const displayName = session.game.name;
 
     // A select menu holds 25 options and one is Cancel
-    const saves = listSaves(sharedData.gameFolder, sharedData.gameId).slice(
+    const saves = listSaves(sharedData.gameFolder, session.game.id).slice(
         0,
         24
     );
@@ -432,7 +394,7 @@ async function handleRestoreForActiveGame(interaction) {
             let savePath = selection;
             let restoredTime = new Date(parseSaveName(savePath).time * 1000);
 
-            sharedData.gameClient.restoreGame(savePath);
+            session.client.restoreGame(savePath);
 
             await interaction.editReply({
                 content: `Restoring ${displayName} with save from ${dateFormat(
@@ -483,24 +445,26 @@ async function handleRestoreForActiveGame(interaction) {
 }
 
 /**
- * Restore a specific save file
+ * Restore a specific save file into a game that was just started
  *
  * @param {string} savePath - Path to the save file
  * @param {Object} interaction - The Discord interaction object
+ * @param {Object} session - The running game to restore into
  */
-async function restoreSaveFile(savePath, interaction) {
+async function restoreSaveFile(savePath, interaction, session) {
     try {
         let restoredTime = new Date(parseSaveName(savePath).time * 1000);
 
-        const displayName = sharedData.gameList.games.find(
-            (it) => it.id === sharedData.gameId
-        ).name;
+        // The game has to reach its first prompt before it can restore
+        if (!(await session.client.whenReady())) {
+            throw new Error('the game did not become ready');
+        }
 
-        sharedData.gameClient.restoreGame(savePath);
+        session.client.restoreGame(savePath);
 
         // Always use editReply on the original interaction
         await interaction.editReply({
-            content: `Restoring ${displayName} with save from ${dateFormat(
+            content: `Restoring ${session.game.name} with save from ${dateFormat(
                 restoredTime,
                 'default'
             )}.`,

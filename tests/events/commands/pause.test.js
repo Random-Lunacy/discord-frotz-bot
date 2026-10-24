@@ -12,15 +12,12 @@ const pauseCommandPath = path.resolve(
     '../../../events/commands/pause.js'
 );
 
-// Mocking sharedData first
-const mockSharedData = {
-    gameActive: true,
-    listenToGame: true,
-    gameId: 'test-game',
-    gameList: {
-        games: [{ id: 'test-game', name: 'Test Game' }],
-    },
+// The game running in the channel the command is used in
+const mockSession = {
+    paused: false,
+    game: { id: 'test-game', name: 'Test Game' },
 };
+const mockSessions = { get: vi.fn() };
 
 // Mock dependencies with proper exports
 vi.mock('discord.js', () => ({
@@ -48,8 +45,8 @@ vi.mock('discord.js', () => ({
 }));
 
 // Use a relative path for the mock
-vi.mock('../../../sharedData.js', () => ({
-    sharedData: mockSharedData,
+vi.mock('../../../sessions.js', () => ({
+    sessions: mockSessions,
 }));
 
 // Now import the modules after mocking
@@ -65,9 +62,9 @@ describe('pause command', () => {
         // Clear all mocks
         vi.clearAllMocks();
 
-        // Reset the listenToGame state before each test
-        mockSharedData.gameActive = true;
-        mockSharedData.listenToGame = true;
+        // A running, unpaused game in this channel
+        mockSession.paused = false;
+        mockSessions.get.mockReturnValue(mockSession);
 
         // Set up mock response for the initial interaction reply
         mockResponse = {
@@ -78,6 +75,7 @@ describe('pause command', () => {
         mockInteraction = {
             reply: vi.fn().mockResolvedValue(mockResponse),
             editReply: vi.fn().mockResolvedValue({}),
+            channel: { id: 'channel-1' },
             user: { id: 'test-user-id' },
         };
 
@@ -89,8 +87,8 @@ describe('pause command', () => {
     });
 
     it('should show an error if no game is running', async () => {
-        // Set gameActive to false to simulate no running game
-        mockSharedData.gameActive = false;
+        // No game in this channel
+        mockSessions.get.mockReturnValue(undefined);
 
         await invoke(mockInteraction);
 
@@ -118,8 +116,9 @@ describe('pause command', () => {
             })
         );
 
-        // Verify that listenToGame was toggled to false (paused)
-        expect(mockSharedData.listenToGame).toBe(false);
+        // Verify that the game was paused
+        expect(mockSessions.get).toHaveBeenCalledWith('channel-1');
+        expect(mockSession.paused).toBe(true);
 
         // Verify that the confirmation was updated with the proper message
         expect(mockConfirmation.update).toHaveBeenCalledWith(
@@ -132,7 +131,7 @@ describe('pause command', () => {
 
     it('should unpause the game when already paused', async () => {
         // Set up the initial state to be paused
-        mockSharedData.listenToGame = false;
+        mockSession.paused = true;
 
         // Mock the awaitMessageComponent to simulate a user clicking the confirm button
         mockConfirmation.customId = 'confirm';
@@ -150,8 +149,8 @@ describe('pause command', () => {
             })
         );
 
-        // Verify that listenToGame was toggled to true (unpaused)
-        expect(mockSharedData.listenToGame).toBe(true);
+        // Verify that the game was unpaused
+        expect(mockSession.paused).toBe(false);
 
         // Verify that the confirmation was updated with the proper message
         expect(mockConfirmation.update).toHaveBeenCalledWith(
@@ -164,7 +163,7 @@ describe('pause command', () => {
 
     it('should do nothing when cancel button is clicked', async () => {
         // Record the initial state
-        const initialListenState = mockSharedData.listenToGame;
+        const initialPaused = mockSession.paused;
 
         // Mock the awaitMessageComponent to simulate a user clicking the cancel button
         mockConfirmation.customId = 'cancel';
@@ -175,8 +174,8 @@ describe('pause command', () => {
         // Verify the interaction reply was called
         expect(mockInteraction.reply).toHaveBeenCalled();
 
-        // Verify that listenToGame was not changed
-        expect(mockSharedData.listenToGame).toBe(initialListenState);
+        // Verify that the pause state was not changed
+        expect(mockSession.paused).toBe(initialPaused);
 
         // Verify that the confirmation was updated with the cancellation message
         expect(mockConfirmation.update).toHaveBeenCalledWith(
