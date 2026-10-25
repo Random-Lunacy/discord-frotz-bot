@@ -127,6 +127,33 @@ export class GameSessions {
     }
 
     /**
+     * Save and stop every running game, all at once, for when the bot is shutting down. One game
+     * failing to save does not stop the others.
+     *
+     * @return {Promise<{session: GameSession, savePath: string|null}[]>} Every game, with where it was saved.
+     */
+    async autoSaveAll() {
+        const all = this.list();
+        const results = await Promise.allSettled(
+            all.map((session) => this.autoSaveAndStop(session.channel.id))
+        );
+
+        return results.map((result, index) => {
+            if (result.status === 'rejected') {
+                Logger.log({
+                    level: 'error',
+                    message: `Error saving the game in ${all[index].channel.id} on shutdown: ${result.reason?.message}`,
+                    stack: result.reason?.stack,
+                });
+            }
+            return {
+                session: all[index],
+                savePath: result.status === 'fulfilled' ? result.value.savePath : null,
+            };
+        });
+    }
+
+    /**
      * Save and stop every game that has been idle for longer than the idle timeout. One game
      * failing to save does not stop the others being shut down.
      *

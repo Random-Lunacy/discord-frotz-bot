@@ -114,6 +114,42 @@ describe('GameSessions', () => {
         expect(sessions.maxGames).toBe(10);
     });
 
+    describe('saving every game on shutdown', () => {
+        it('should save and stop all the games at once', async () => {
+            const a = sessions.create({ channel: channel('a'), game, ownerId: 'u1' });
+            const b = sessions.create({ channel: channel('b'), game, ownerId: 'u2' });
+            vi.spyOn(a.client, 'autoSave').mockResolvedValue('/games/a.qzl');
+            vi.spyOn(b.client, 'autoSave').mockResolvedValue('/games/b.qzl');
+
+            const results = await sessions.autoSaveAll();
+
+            expect(results).toEqual([
+                { session: a, savePath: '/games/a.qzl' },
+                { session: b, savePath: '/games/b.qzl' },
+            ]);
+            expect(sessions.size).toBe(0);
+        });
+
+        it('should still save the others when one game fails', async () => {
+            const bad = sessions.create({ channel: channel('bad'), game, ownerId: 'u1' });
+            const good = sessions.create({ channel: channel('good'), game, ownerId: 'u1' });
+            vi.spyOn(bad.client, 'autoSave').mockRejectedValue(new Error('disk full'));
+            vi.spyOn(good.client, 'autoSave').mockResolvedValue('/games/good.qzl');
+
+            const results = await sessions.autoSaveAll();
+
+            expect(results).toEqual([
+                { session: bad, savePath: null },
+                { session: good, savePath: '/games/good.qzl' },
+            ]);
+            expect(sessions.size).toBe(0);
+        });
+
+        it('should do nothing when no games are running', async () => {
+            expect(await sessions.autoSaveAll()).toEqual([]);
+        });
+    });
+
     describe('idle games', () => {
         const MINUTE = 60_000;
 

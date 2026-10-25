@@ -2,6 +2,7 @@ import { } from 'dotenv/config';
 import fs from 'fs';
 import { Client, GatewayIntentBits } from 'discord.js';
 import { sharedData } from './sharedData.js';
+import { registerShutdownHandlers } from './shutdown.js';
 
 // Create a new client instance
 const client = new Client({
@@ -13,6 +14,9 @@ const client = new Client({
 });
 
 sharedData.client = client;
+
+// Save running games if the bot is stopped or restarted
+registerShutdownHandlers(client);
 
 // Fetch all js files in ./events
 const events = fs
