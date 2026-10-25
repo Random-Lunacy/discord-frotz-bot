@@ -14,7 +14,7 @@ Features:
 -   Each game is played in its own Discord thread, and several games can run at once.
 -   Players save, restore and quit with the game's own commands. Saves are named for the game, thread, player and time,
     and use the standard Quetzal format, so saves from other interpreters (including Frotz) can be restored.
--   Games are saved automatically when their thread is archived or the game goes idle.
+-   Games are saved automatically when their thread is archived, the game goes idle, or the bot is stopped or restarted.
 -   Slash commands for starting, restoring and pausing games, plus admin commands to see and stop every game.
 
 ### Supported games
@@ -164,8 +164,8 @@ lines, so a game with unusual wording may need you to type something instead.
     existing one (reopened if it was archived) is used again instead of making another, so each player has their own
     thread for each game. If there isn't one, a new thread is created.
 -   `/start` inside a thread plays the game in that thread, if it doesn't already have one.
--   At most `MAX_GAMES` games run at once. A game is stopped if its thread is deleted, and games do not survive a
-    restart of the bot; saves do.
+-   At most `MAX_GAMES` games run at once. A game is stopped if its thread is deleted. A running game does not
+    survive a restart of the bot, but it is autosaved first (see [Automatic saves](#automatic-saves)).
 
 ### Saving and restoring
 
@@ -187,7 +187,7 @@ user IDs, the Unix time of the save, and the optional name the player gave it. O
 
 ### Automatic saves
 
-Games are saved quietly, as an `autosave` that appears in the restore lists, in two cases:
+Games are saved quietly, as an `autosave` that appears in the restore lists, in three cases:
 
 -   **Idle:** after `IDLE_TIMEOUT_MINUTES` without a player message (or a `/pause` or `/restore`) the game is saved
     and shut down to free resources. A paused game counts as idle. The thread stays open and the bot says so there;
@@ -195,6 +195,12 @@ Games are saved quietly, as an `autosave` that appears in the restore lists, in 
 -   **Archived thread:** Discord archives a thread after `THREAD_LIFETIME_DAYS` without messages, whether or not the
     game is paused, and someone can also close it by hand. The game is saved first and then stopped. Use `/restore`
     in the thread or its channel to continue.
+-   **The bot stopping:** when the bot gets a stop signal (Ctrl+C, `kill`, or a service restart) it saves every running
+    game, tells each thread, and then exits. It gives up after 15 seconds. Players use `/restore` in their thread
+    once the bot is back. A forced kill (`kill -9`), a crash or a power cut cannot be saved.
+    The signal has to reach the bot itself: `npm start` does not pass a stop signal on (stopping `npm` leaves the bot
+    running), so under a service manager or when scripting restarts run `node ./frotz-bot.js` directly and signal that
+    process.
 
 If a game cannot be saved (for example it is not responding) it is stopped without a save, so save before leaving a
 game for a long time.

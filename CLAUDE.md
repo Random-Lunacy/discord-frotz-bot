@@ -38,6 +38,8 @@ rezrov's built `dist`, so rebuild it after changing rezrov.
 -   `keyPrompt.js` handles the Continue button the client posts when a game stops at "press any key" (found by
     `isAnyKeyPrompt` in `screenText.js`). `DiscordInputProcessor` presses Enter for any typed text at such a prompt and
     keeps the text as the next command. `restoreGame` and `autoSave` get past these prompts before typing `restore`/`save`.
+-   `shutdown.js` handles SIGINT/SIGTERM: it autosaves every running game (`sessions.autoSaveAll`), posts a notice in each
+    thread, closes the Discord client and exits (it gives up after 15 seconds, and a second signal exits at once).
 -   `saves.js` builds, parses and lists save names: `<game>-<channel>-<user>-<time>[-<label>].qzl` (older saves are
     `<game>-<time>-<user>.qzl`). Game IDs must not contain hyphens.
 -   `sharedData.js` holds config only (`client`, `gameFolder`, `gameList` from `games.json`). There is no global game state.
