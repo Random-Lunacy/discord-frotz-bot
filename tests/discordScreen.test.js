@@ -197,4 +197,46 @@ describe('DiscordScreen', () => {
             expect(blocks.map(Boolean)).toEqual([true, false, true]);
         });
     });
+
+    describe('after the bot cancelled a save or restore', () => {
+        it('should drop the game\'s own Failed. notice, once', () => {
+            screen.suppressFailure = true;
+            screen.print(machine, 'Failed.\n\n>');
+            screen.flush();
+            screen.print(machine, 'Failed.');
+            screen.flush();
+
+            expect(onFlush).toHaveBeenCalledTimes(1);
+            expect(onFlush).toHaveBeenCalledWith('Failed.', null, null);
+            expect(screen.suppressFailure).toBe(false);
+        });
+
+        it('should keep any other text the game printed', () => {
+            screen.suppressFailure = true;
+            screen.print(machine, 'Failed.\n\nYou are in a maze.');
+            screen.flush();
+
+            expect(onFlush).toHaveBeenCalledWith('Failed.\n\nYou are in a maze.', null, null);
+        });
+
+        it('should not lose the status line when the notice is dropped', () => {
+            screen.updateStatusBar('West of House', 0, 1, false);
+            screen.suppressFailure = true;
+            screen.print(machine, 'Failed.');
+            screen.flush();
+            expect(onFlush).not.toHaveBeenCalled();
+
+            screen.print(machine, 'Next.');
+            screen.flush();
+
+            expect(onFlush.mock.calls[0][1]).toContain('West of House');
+        });
+
+        it('should show a Failed. notice when the bot did not cancel anything', () => {
+            screen.print(machine, 'Failed.');
+            screen.flush();
+
+            expect(onFlush).toHaveBeenCalledWith('Failed.', null, null);
+        });
+    });
 });
