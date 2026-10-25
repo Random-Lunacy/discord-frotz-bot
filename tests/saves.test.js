@@ -5,6 +5,8 @@ import path from 'node:path';
 import {
     buildSaveName,
     DEFAULT_LABEL_TEMPLATE,
+    describeSave,
+    describeSavePath,
     expandLabelTemplate,
     gameForChannel,
     listSaves,
@@ -229,5 +231,52 @@ describe('gameForChannel', () => {
 
     it('should return null when the thread says nothing about a game', () => {
         expect(gameForChannel(folder, games, { id: 't9', name: 'general chat' })).toBeNull();
+    });
+});
+
+describe('describeSave', () => {
+    const save = { label: 'before_the_troll', userId: '123', time: 1700000000 };
+
+    it('should give the name, who saved it and when', () => {
+        expect(describeSave(save)).toBe(
+            '"before_the_troll" saved by <@123> <t:1700000000:f>'
+        );
+    });
+
+    it('should leave out who saved it when asked', () => {
+        expect(describeSave(save, { user: false })).toBe(
+            '"before_the_troll" <t:1700000000:f>'
+        );
+    });
+
+    it('should cope with a save that has no name', () => {
+        expect(describeSave({ ...save, label: '' })).toBe(
+            'saved by <@123> <t:1700000000:f>'
+        );
+        expect(describeSave({ ...save, label: '' }, { user: false })).toBe(
+            '<t:1700000000:f>'
+        );
+    });
+
+    it('should never include a file name', () => {
+        expect(describeSave(save)).not.toContain('.qzl');
+    });
+});
+
+describe('describeSavePath', () => {
+    it('should describe the save a file holds', () => {
+        expect(
+            describeSavePath('/games/zork1-555-123-1700000000-autosave.qzl', { user: false })
+        ).toBe('"autosave" <t:1700000000:f>');
+    });
+
+    it('should describe an old-format save', () => {
+        expect(describeSavePath('/games/sorcerer-1696122293-245714843821277185.qzl')).toBe(
+            'saved by <@245714843821277185> <t:1696122293:f>'
+        );
+    });
+
+    it('should not show the name of a file it cannot read', () => {
+        expect(describeSavePath('/games/odd.qzl')).toBe('a save');
     });
 });

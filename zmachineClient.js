@@ -16,6 +16,7 @@ import { DiscordInputProcessor } from './discordInputProcessor.js';
 import {
     buildSaveName,
     DEFAULT_LABEL_TEMPLATE,
+    describeSave,
     expandLabelTemplate,
     listSaves,
     preferChannel,
@@ -557,7 +558,7 @@ export class ZMachineClient extends EventEmitter {
             time: Math.floor(Date.now() / 1000),
             label,
         });
-        this.say(`Saving as \`${name}\`.`);
+        this.say(`Saving as "${label}".`);
         return `${sharedData.gameFolder}/${name}`;
     }
 
@@ -598,10 +599,9 @@ export class ZMachineClient extends EventEmitter {
             return '';
         }
 
-        const lines = saves.map((save, index) => {
-            const label = save.label ? ` "${save.label}"` : '';
-            return `${index + 1}.${label} saved by <@${save.userId}> <t:${save.time}:f>`;
-        });
+        const lines = saves.map(
+            (save, index) => `${index + 1}. ${describeSave(save)}`
+        );
         this.say(
             `<@${userId}> Which save do you want to restore?\n${lines.join('\n')}\n` +
                 'Reply with a number, `latest`, or `cancel`. Only your reply will be used.'
