@@ -13,6 +13,8 @@ vi.mock('fs', async (importOriginal) => {
     };
 });
 vi.mock('../../idleSweep.js', () => ({ startIdleSweep: mockStartIdleSweep }));
+// channelAccess loads the real sessions, which load the config; there is no games.json here
+vi.mock('../../sharedData.js', () => ({ sharedData: { gameFolder: '/games', gameList: { games: [] } } }));
 vi.mock('../../logger.js', () => ({ Logger: { log } }));
 vi.mock('#commands/start', () => ({ create: () => ({ name: 'start' }) }));
 vi.mock('#commands/games', () => ({ create: () => ({ name: 'games' }) }));

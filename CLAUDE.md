@@ -52,6 +52,10 @@ rezrov's built `dist`, so rebuild it after changing rezrov.
 ## Conventions
 
 -   4-space indent, single quotes, semicolons (enforced by eslint). Match the surrounding comment density and JSDoc style.
+-   CI has no `.env` and no game files, but a developer machine usually has both, so a test can pass locally and fail on CI
+    (a real module reading `GAME_FOLDER` is the usual cause). To see what CI sees, run
+    `env -u GAME_FOLDER DOTENV_CONFIG_PATH=/nonexistent npx vitest run`, with `games/` moved aside if you want the
+    game-file tests skipped too.
 -   Tests are in `tests/` (vitest, `globals: true`). Tests that play a real game skip unless `games/zork-i.z3` exists;
     they copy it to a temp folder and never touch real saves.
 -   Mock `discord.js` builders with `function () { return {...}; }`, not arrow functions (vitest 4+ can't construct
