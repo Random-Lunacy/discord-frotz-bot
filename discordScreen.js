@@ -1,4 +1,5 @@
 import { BaseScreen, translateFont3Text } from 'rezrov-zmachine';
+import { describeUpperWindow, fenceAlignedText } from './screenText.js';
 
 /**
  * Screen for rezrov-zmachine that collects game output as plain text.
@@ -11,6 +12,10 @@ export class DiscordScreen extends BaseScreen {
         this.onFlush = onFlush;
         this.buffer = '';
         this.status = null;
+
+        // What was last sent, so a status line or block is only sent again when it changes
+        this.lastStatus = null;
+        this.lastBlock = null;
     }
 
     getCapabilities() {
@@ -66,17 +71,36 @@ export class DiscordScreen extends BaseScreen {
     }
 
     /**
-     * Hand everything printed since the last flush to the callback.
+     * Hand everything printed since the last flush to the callback: the text, the status line
+     * (when it has changed) and a block of positioned text from the upper window (when it has
+     * changed).
      */
     flush() {
         let text = this.buffer;
         this.buffer = '';
 
-        // The game prints its own '>' prompt; the chat channel doesn't need it
-        text = text.replace(/\s*>\s*$/, '').trim();
+        // The game prints its own '>' prompt (some print two); the chat channel doesn't need it.
+        // Long runs of blank lines (used to space out a title) are shortened to one.
+        text = text
+            .replace(/\s*>+\s*$/, '')
+            .replace(/(\n[ \t]*){3,}/g, '\n\n')
+            .trim();
+        text = fenceAlignedText(text);
 
-        if (text.length > 0) {
-            this.onFlush(text, this.status);
+        // V1-V3 games set the status line directly; V4+ games draw it in the upper window
+        const upper = describeUpperWindow(this.upperWindowBuffer.slice(0, this.upperWindowHeight));
+        const statusLine = this.status ?? upper.status;
+
+        const status = statusLine !== null && statusLine !== this.lastStatus ? statusLine : null;
+        if (statusLine !== null) {
+            this.lastStatus = statusLine;
+        }
+
+        const block = upper.block !== null && upper.block !== this.lastBlock ? upper.block : null;
+        this.lastBlock = upper.block;
+
+        if (text.length > 0 || block !== null) {
+            this.onFlush(text, status, block);
         }
     }
 

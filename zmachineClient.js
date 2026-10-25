@@ -96,8 +96,8 @@ export class ZMachineClient extends EventEmitter {
                 story = BlorbParser.getExecData(blorbMap, story) ?? story;
             }
 
-            this.screen = new DiscordScreen((text, status) =>
-                this.sendOutput(text, status)
+            this.screen = new DiscordScreen((text, status, block) =>
+                this.sendOutput(text, status, block)
             );
             this.screen.onQuit = () => this.handleGameEnd();
             this.input = new DiscordInputProcessor(this.screen, {
@@ -174,11 +174,17 @@ export class ZMachineClient extends EventEmitter {
      * Discord has a 2000 character limit per message.
      *
      * @param {string} text - The text the game printed.
-     * @param {string|null} status - The status line (V1-V3 games), if any.
+     * @param {string|null} status - The status line, if it has changed.
+     * @param {string|null} [block] - Positioned text from the upper window (already in a code
+     *     block), if it has changed. It is sent first, as a message of its own.
      */
-    sendOutput(text, status) {
+    sendOutput(text, status, block = null) {
         if (this.silent) {
             return;
+        }
+
+        if (block) {
+            this.sendChunk(block);
         }
 
         let final = status ? `-# ${status}\n${text}` : text;

@@ -32,6 +32,9 @@ rezrov's built `dist`, so rebuild it after changing rezrov.
 -   `zmachineClient.js` (`ZMachineClient`) plays one game in one thread. It owns the interpreter, turns game output
     into Discord messages, asks players save/restore questions, and autosaves quietly (`silent` suppresses all
     messages). `discordScreen.js` and `discordInputProcessor.js` are its rezrov screen and input implementations.
+-   `screenText.js` turns what a game draws into Discord text: a V4+ upper window becomes a status line (one row) or a
+    code block (several rows), and aligned main-window paragraphs are put in code blocks. `DiscordScreen.flush()` uses
+    it and only sends a status line or block again when it changes.
 -   `saves.js` builds, parses and lists save names: `<game>-<channel>-<user>-<time>[-<label>].qzl` (older saves are
     `<game>-<time>-<user>.qzl`). Game IDs must not contain hyphens.
 -   `sharedData.js` holds config only (`client`, `gameFolder`, `gameList` from `games.json`). There is no global game state.

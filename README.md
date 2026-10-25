@@ -6,8 +6,8 @@
 
 This project hosts interactive fiction games on Discord. Players type in a thread and the bot replies with the game's
 output. Games run on [rezrov-zmachine](https://github.com/Random-Lunacy/rezrov-zmachine), a Z-machine interpreter
-written in TypeScript that runs inside the bot, so no external interpreter needs to be installed. Most interactive
-fiction games with a `.z[number]` file extension (Z-machine versions 1-5) should work correctly.
+written in TypeScript that runs inside the bot, so no external interpreter needs to be installed. Z-machine
+versions 1-3 (most Infocom games) are fully supported and versions 4-5 have [limited support](#supported-games).
 
 Features:
 
@@ -16,6 +16,19 @@ Features:
     and use the standard Quetzal format, so saves from other interpreters (including Frotz) can be restored.
 -   Games are saved automatically when their thread is archived or the game goes idle.
 -   Slash commands for starting, restoring and pausing games, plus admin commands to see and stop every game.
+
+### Supported games
+
+Everything is shown as text in a Discord thread, so what a game can do depends on how much of its interface is text.
+
+| Z-machine version                              | Support  | Notes                                                                                                                             |
+| ---------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| V1-V3 (most Infocom games, e.g. Zork, Deadline) | Full     | The status line (location with score and moves, or the time) is shown above each reply when it changes.                           |
+| V4-V5 (e.g. Trinity, Bureaucracy, Sherlock, Adventure) | Limited | The status line is shown. Text the game positions in the upper window (title screens, panels, forms) is sent as a code block when it changes. There are no colors, styles, graphics, sound or mouse, and no timed input, so real-time features such as Border Zone's do not work. Games that draw a complex screen, such as maps or menus, are only roughly approximated. |
+| V6 and later (Journey, Zork Zero, Arthur)       | None     | These games depend on graphics and windows that a chat message cannot show.                                                       |
+
+Full V5 and V6 support is planned as a companion app built on the Discord Embedded App SDK (an activity that runs inside
+Discord), which can draw a real screen. It does not exist yet.
 
 <!-- GETTING STARTED -->
 
@@ -134,8 +147,10 @@ The bot is controlled with slash commands. Server admins are users with the **Ma
 
 While a game is running, every message in its thread is sent to the game as a command, so the game's own `save`,
 `restore`, `undo` and `quit` commands all work. Players leave a game themselves by typing `quit` and answering the
-game's own confirmation. For games that show a status line (Z-machine versions 1-3), the location, score and moves are
-shown above each reply. `/pause` makes the bot ignore messages, which is useful in games where time advances.
+game's own confirmation. A game's status line (location with score and moves, or the time) is shown above a reply when it has changed. For V4
+and V5 games it comes from the game's upper window, and any other positioned text in that window (a title screen, a panel,
+a form) is sent as a code block so its layout survives. Text the game aligns with
+spaces in its main window, such as a quote with an indented attribution, is also put in a code block. `/pause` makes the bot ignore messages, which is useful in games where time advances.
 
 ### Threads
 
