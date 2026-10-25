@@ -198,6 +198,9 @@ Games are saved quietly, as an `autosave` that appears in the restore lists, in 
 -   **The bot stopping:** when the bot gets a stop signal (Ctrl+C, `kill`, or a service restart) it saves every running
     game, tells each thread, and then exits. It gives up after 15 seconds. Players use `/restore` in their thread
     once the bot is back. A forced kill (`kill -9`), a crash or a power cut cannot be saved.
+    The signal has to reach the bot itself: `npm start` does not pass a stop signal on (stopping `npm` leaves the bot
+    running), so under a service manager or when scripting restarts run `node ./frotz-bot.js` directly and signal that
+    process.
 
 If a game cannot be saved (for example it is not responding) it is stopped without a save, so save before leaving a
 game for a long time.
