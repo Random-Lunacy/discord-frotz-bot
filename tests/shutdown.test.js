@@ -10,7 +10,8 @@ const log = vi.fn();
 vi.mock('../sessions.js', () => ({ sessions: mockSessions }));
 vi.mock('../logger.js', () => ({ Logger: { log } }));
 
-const { announceShutdown, createShutdownHandler, shutdownGames } = await import('../shutdown.js');
+const { announceShutdown, createShutdownHandler, registerShutdownHandlers, shutdownGames } =
+    await import('../shutdown.js');
 
 const session = (name, send = vi.fn().mockResolvedValue({})) => ({
     game: { name },
@@ -139,5 +140,22 @@ describe('createShutdownHandler', () => {
         await handler('SIGTERM');
 
         expect(exit).toHaveBeenCalledWith(0);
+    });
+});
+
+describe('registerShutdownHandlers', () => {
+    it('should save games on Ctrl+C, kill, and the terminal going away', () => {
+        const on = vi.spyOn(process, 'on').mockImplementation(() => process);
+        try {
+            registerShutdownHandlers({ destroy: vi.fn() });
+
+            expect(on.mock.calls.map(([signal]) => signal).sort()).toEqual([
+                'SIGHUP',
+                'SIGINT',
+                'SIGTERM',
+            ]);
+        } finally {
+            on.mockRestore();
+        }
     });
 });

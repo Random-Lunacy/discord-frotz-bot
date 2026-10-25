@@ -39,7 +39,8 @@ rezrov's built `dist`, so rebuild it after changing rezrov.
 -   `keyPrompt.js` handles the Continue button the client posts when a game stops at "press any key" (found by
     `isAnyKeyPrompt` in `screenText.js`). `DiscordInputProcessor` presses Enter for any typed text at such a prompt and
     keeps the text as the next command. `restoreGame` and `autoSave` get past these prompts before typing `restore`/`save`.
--   `shutdown.js` handles SIGINT/SIGTERM: it autosaves every running game (`sessions.autoSaveAll`), posts a notice in each
+-   `deploy/` and `docs/deployment.md` hold the systemd unit and the server notes (service, screen, pm2, updating, upgrading).
+-   `shutdown.js` handles SIGINT/SIGTERM/SIGHUP: it autosaves every running game (`sessions.autoSaveAll`), posts a notice in each
     thread, closes the Discord client and exits (it gives up after 15 seconds, and a second signal exits at once).
 -   `channelAccess.js` decides where commands work (`ALLOWED_CHANNELS`: listed channels, threads under them, threads with
     a game running; admins may use `/status` anywhere). `events/interactionCreate.js` checks it before running a command

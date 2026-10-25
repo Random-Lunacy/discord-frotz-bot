@@ -1,0 +1,29 @@
+# systemd unit for discord-frotz-bot. See docs/deployment.md.
+#
+# Install it as /etc/systemd/system/frotz-bot.service after changing the three lines marked EDIT:
+#   User              the account that owns the bot's folder
+#   WorkingDirectory  the bot's folder (the bot reads ./events, ./games and ./logs from here)
+#   ExecStart         the full path to node (`command -v node`) followed by ./frotz-bot.js
+# Run node itself here, not `npm start`: npm does not pass a stop signal on to the bot.
+
+[Unit]
+Description=Discord Frotz bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/discord-frotz-bot
+ExecStart=/usr/bin/node ./frotz-bot.js
+
+# Restart after a crash, but not after a normal stop
+Restart=on-failure
+RestartSec=10
+
+# A stop sends SIGTERM. The bot saves every running game (it allows itself 15 seconds) and exits.
+# Give it a little longer than that before systemd gives up and kills it.
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

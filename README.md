@@ -108,7 +108,8 @@ anyone else.
     cp games/games.json.template games/games.json
     ```
 8. Edit `games.json` to include your Z-machine games. See [games/games.md](games/games.md) for more information.
-9. Start the bot from the repository root with `npm run start`. The slash commands are registered every time the bot
+9. Start the bot from the repository root with `npm run start`. To keep it running on a server, see
+   [Running the bot on a server](docs/deployment.md). The slash commands are registered every time the bot
    starts and can take a minute to appear in Discord.
 
 To update later, `git pull` in both folders, run `npm run build` in `rezrov-zmachine`, `npm install` in the bot, and
@@ -197,12 +198,12 @@ Games are saved quietly, as an `autosave` that appears in the restore lists, in 
 -   **Archived thread:** Discord archives a thread after `THREAD_LIFETIME_DAYS` without messages, whether or not the
     game is paused, and someone can also close it by hand. The game is saved first and then stopped. Use `/restore`
     in the thread or its channel to continue.
--   **The bot stopping:** when the bot gets a stop signal (Ctrl+C, `kill`, or a service restart) it saves every running
+-   **The bot stopping:** when the bot gets a stop signal (Ctrl+C, `kill`, a service restart, or its terminal closing) it saves every running
     game, tells each thread, and then exits. It gives up after 15 seconds. Players use `/restore` in their thread
     once the bot is back. A forced kill (`kill -9`), a crash or a power cut cannot be saved.
-    The signal has to reach the bot itself: `npm start` does not pass a stop signal on (stopping `npm` leaves the bot
-    running), so under a service manager or when scripting restarts run `node ./frotz-bot.js` directly and signal that
-    process.
+    The signal has to reach the bot itself: stopping `npm` does not pass it on (it leaves the bot running), so under a
+    service manager or when scripting restarts run `node ./frotz-bot.js` directly. See
+    [Running the bot on a server](docs/deployment.md).
 
 If a game cannot be saved (for example it is not responding) it is stopped without a save, so save before leaving a
 game for a long time.
