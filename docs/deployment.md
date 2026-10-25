@@ -50,7 +50,11 @@ and a crash was restarted with a new process. Not yet run on the production serv
     sudoedit /etc/systemd/system/frotz-bot.service
     sudo systemd-analyze verify /etc/systemd/system/frotz-bot.service
     ```
-3. Start it, and have it start at boot:
+3. **Remove anything else that starts the bot.** If a crontab entry (`crontab -l`, for example
+   `@reboot sh /home/you/startFrotzBot.sh`) or another startup script launches it, delete that line with `crontab -e`.
+   Two copies of the bot on one token would each answer every command, and after a reboot cron would start the second
+   one. Stop any copy that is running now (for the screen setup, `screen -r FROTZ` then Ctrl+C) before the next step.
+4. Start it, and have it start at boot:
     ```sh
     sudo systemctl daemon-reload
     sudo systemctl enable --now frotz-bot
@@ -101,7 +105,9 @@ Tested with a stand-in process: Ctrl+C typed into the session, `screen -X stuff`
 `npm` process, as described above.
 
 To start it at boot without a service, add `@reboot /home/you/start-frotz.sh` to your crontab (`crontab -e`). A service
-is better: it restarts the bot after a crash and gives you a log.
+is better: it restarts the bot after a crash, gives you a log, and is stopped properly when the machine shuts down or
+reboots (systemd waits for the bot to save its games; with cron and screen, nothing waits for it, so the saves are not
+reliable). If you move to a service, remove the crontab line.
 
 ## pm2
 
@@ -234,7 +240,8 @@ inside the bot, in threads. Steps for a server running the old version:
 8. **Give the bot's role two more permissions** in the server (Server Settings, Roles): **Create Public Threads** and
    **Send Messages in Threads**. Each game is played in its own thread. No new invite is needed, and the Message
    Content intent stays on.
-9. **Start it** with systemd or the updated screen script above. The `/channel` command is gone and new ones appear
+9. **Start it** with systemd or the updated screen script above. If you start the bot from a crontab `@reboot` line
+   today, take that line out when you switch to a service. The `/channel` command is gone and new ones appear
    after a minute; players start games with `/start` in a channel and play in the thread the bot creates.
 10. `dfrotz` is no longer used and can be uninstalled.
 
