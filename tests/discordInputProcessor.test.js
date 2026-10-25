@@ -7,8 +7,9 @@ describe('DiscordInputProcessor', () => {
     let input;
 
     beforeEach(() => {
-        screen = { flush: vi.fn() };
+        screen = { flush: vi.fn(), lastText: '' };
         prompts = {
+            anyKey: vi.fn(),
             save: vi.fn().mockResolvedValue('/games/new-save.qzl'),
             restore: vi.fn().mockResolvedValue('/games/old-save.qzl'),
         };
@@ -65,5 +66,67 @@ describe('DiscordInputProcessor', () => {
             '/games/new-save.qzl'
         );
         expect(prompts.save).toHaveBeenCalled();
+    });
+
+    describe('press any key prompts', () => {
+        beforeEach(() => {
+            screen.lastText = 'The story begins.\n\n[Press any key to begin.]';
+            input.doStartCharInput();
+        });
+
+        it('should ask for the Continue button when the game pauses for any key', () => {
+            expect(input.anyKeyPending).toBe(true);
+            expect(prompts.anyKey).toHaveBeenCalledTimes(1);
+        });
+
+        it('should not ask for the button when the game wants a particular key', () => {
+            prompts.anyKey.mockClear();
+            screen.lastText = 'Do you want to continue? (y/n)';
+
+            input.doStartCharInput();
+
+            expect(input.anyKeyPending).toBe(false);
+            expect(prompts.anyKey).not.toHaveBeenCalled();
+        });
+
+        it('should press Enter when the player types a single character', () => {
+            input.submit('x');
+
+            expect(input.onKeyPress).toHaveBeenCalledWith(input.machine, '\r');
+            expect(input.queuedLine).toBeNull();
+            expect(input.anyKeyPending).toBe(false);
+        });
+
+        it('should press Enter and keep what the player typed as their next command', () => {
+            input.submit('look at the sundial');
+
+            expect(input.onKeyPress).toHaveBeenCalledWith(input.machine, '\r');
+            expect(input.queuedLine).toBe('look at the sundial');
+        });
+
+        it('should send the kept command when the game next asks for a line', () => {
+            vi.useFakeTimers();
+            try {
+                input.submit('look');
+
+                input.doStartTextInput();
+                vi.runAllTimers();
+
+                expect(input.onInputComplete).toHaveBeenCalledWith(input.machine, 'look', 13);
+                expect(input.queuedLine).toBeNull();
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it('should still use the first character at a prompt that is not a pause', () => {
+            screen.lastText = 'Which way? [N/S/E/W]';
+            input.doStartCharInput();
+
+            input.submit('north');
+
+            expect(input.onKeyPress).toHaveBeenCalledWith(input.machine, 'n');
+            expect(input.queuedLine).toBeNull();
+        });
     });
 });

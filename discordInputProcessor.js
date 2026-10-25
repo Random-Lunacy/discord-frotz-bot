@@ -1,4 +1,5 @@
 import { BaseInputProcessor } from 'rezrov-zmachine';
+import { isAnyKeyPrompt } from './screenText.js';
 
 /**
  * Input processor for rezrov-zmachine. The game suspends when it asks for
@@ -10,6 +11,7 @@ export class DiscordInputProcessor extends BaseInputProcessor {
      * @param {object} prompts - Asks the player for a filename when the game saves or restores.
      * @param {function(): Promise<string>} prompts.save
      * @param {function(): Promise<string>} prompts.restore
+     * @param {function(): void} [prompts.anyKey] - Called when the game pauses for any key.
      */
     constructor(screen, prompts) {
         super();
@@ -19,18 +21,37 @@ export class DiscordInputProcessor extends BaseInputProcessor {
         this.waiting = false;
         this.charMode = false;
         this.pendingFilename = null;
+
+        // True while the game is paused on a "press any key" prompt
+        this.anyKeyPending = false;
+
+        // What a player typed at an "any key" prompt, to use as the game's next command
+        this.queuedLine = null;
     }
 
     doStartTextInput() {
         this.waiting = true;
         this.charMode = false;
+        this.anyKeyPending = false;
         this.screen.flush();
+
+        if (this.queuedLine !== null) {
+            const line = this.queuedLine;
+            this.queuedLine = null;
+            // Let the game finish suspending before it is resumed
+            setTimeout(() => this.submit(line), 0);
+        }
     }
 
     doStartCharInput() {
         this.waiting = true;
         this.charMode = true;
         this.screen.flush();
+
+        this.anyKeyPending = isAnyKeyPrompt(this.screen.lastText);
+        if (this.anyKeyPending) {
+            this.prompts.anyKey?.();
+        }
     }
 
     /**
@@ -46,7 +67,18 @@ export class DiscordInputProcessor extends BaseInputProcessor {
         this.waiting = false;
 
         if (this.charMode) {
-            this.onKeyPress(this.machine, text.charAt(0) || '\r');
+            let key = text.charAt(0) || '\r';
+
+            // A pause takes any key. Anything the player typed is kept as their next command,
+            // rather than being thrown away after its first letter.
+            if (this.anyKeyPending) {
+                key = '\r';
+                if (text.trim().length > 1) {
+                    this.queuedLine = text;
+                }
+            }
+            this.anyKeyPending = false;
+            this.onKeyPress(this.machine, key);
         } else {
             this.onInputComplete(this.machine, text, 13);
         }

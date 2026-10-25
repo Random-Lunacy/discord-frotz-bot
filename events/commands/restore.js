@@ -426,7 +426,13 @@ async function handleRestoreForActiveGame(interaction, session) {
             let restoredTime = new Date(parseSaveName(savePath).time * 1000);
 
             session.touch();
-            session.client.restoreGame(savePath);
+            if (!(await session.client.restoreGame(savePath))) {
+                await interaction.editReply({
+                    content: 'The game is not ready to restore a save right now.',
+                    components: [],
+                });
+                return;
+            }
 
             await interaction.editReply({
                 content: `Restoring ${displayName} with save from ${dateFormat(
@@ -493,7 +499,9 @@ async function restoreSaveFile(savePath, interaction, session) {
         }
 
         session.touch();
-        session.client.restoreGame(savePath);
+        if (!(await session.client.restoreGame(savePath))) {
+            throw new Error('the game did not become ready');
+        }
 
         // Always use editReply on the original interaction
         await interaction.editReply({

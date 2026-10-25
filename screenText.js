@@ -107,3 +107,20 @@ export function fenceAlignedText(text) {
         )
         .join('');
 }
+
+// "[Press any key to begin.]", "[Hit any key to continue.]", "Strike a key" ...
+const PRESS_KEY = /\b(?:press|hit|strike|touch|tap)\b[^\n]{0,40}?\bkey\b/i;
+// "[Press RETURN to continue.]", "[Continue]" ...
+const BRACKETED_CONTINUE = /\[[^\]\n]*\b(?:continue|begin|proceed)\b[^\]\n]*\]/i;
+
+/**
+ * Whether the end of some output is a prompt to press any key. A game that wants a single key for
+ * something else (a menu choice, yes or no) won't match.
+ *
+ * @param {string} text - What the game printed before asking for a key.
+ * @return {boolean} True if the game is just pausing.
+ */
+export function isAnyKeyPrompt(text) {
+    const lastLines = text.trimEnd().split('\n').slice(-2).join('\n');
+    return PRESS_KEY.test(lastLines) || BRACKETED_CONTINUE.test(lastLines);
+}

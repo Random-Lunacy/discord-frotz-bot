@@ -4,6 +4,7 @@ import {
     fence,
     fenceAlignedText,
     isAligned,
+    isAnyKeyPrompt,
     trimRows,
 } from '../screenText.js';
 
@@ -116,5 +117,36 @@ describe('fenceAlignedText', () => {
         const big = Array.from({ length: 40 }, () => '    ' + 'x'.repeat(70)).join('\n');
 
         expect(fenceAlignedText(big)).toBe(big);
+    });
+});
+
+describe('isAnyKeyPrompt', () => {
+    it.each([
+        '[Press any key to begin.]',
+        '[Hit any key to continue.]',
+        '[Press any key.]',
+        'Copyright (C)1986 Infocom, Inc.\n\n[Press any key to begin.]',
+        'Strike a key to go on',
+        '[Press RETURN to continue.]',
+        '[Press SPACE to continue]',
+        '[More]  Touch any key',
+    ])('should recognise %j', (text) => {
+        expect(isAnyKeyPrompt(text)).toBe(true);
+    });
+
+    it.each([
+        'Do you want to quit? (y/n)',
+        'Which way? [N/S/E/W]',
+        'Choose a number from 1 to 5:',
+        'You press the red button. Nothing happens.',
+        '',
+    ])('should not mistake %j for a pause', (text) => {
+        expect(isAnyKeyPrompt(text)).toBe(false);
+    });
+
+    it('should only look at the end of the output', () => {
+        const text = '[Press any key to continue.]\n\nA long passage.\n\nMore story.\n\nWhat now?';
+
+        expect(isAnyKeyPrompt(text)).toBe(false);
     });
 });

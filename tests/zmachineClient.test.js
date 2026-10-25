@@ -26,6 +26,7 @@ import { ZMachineClient } from '../zmachineClient.js';
 let GameClient;
 
 const hasZork = fs.existsSync(`${gameFolder}/zork-i.z3`);
+const hasTrinity = fs.existsSync(`${gameFolder}/trinity.z4`);
 const message = (content, userId = 'u1') => ({
     content,
     author: { id: userId },
@@ -45,11 +46,13 @@ describe('ZMachineClient', () => {
             gameName: 'Zork I',
         });
         state.gameFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'games-'));
-        if (hasZork) {
-            fs.copyFileSync(
-                `${gameFolder}/zork-i.z3`,
-                `${state.gameFolder}/zork-i.z3`
-            );
+        for (const game of ['zork-i.z3', 'trinity.z4']) {
+            if (fs.existsSync(`${gameFolder}/${game}`)) {
+                fs.copyFileSync(
+                    `${gameFolder}/${game}`,
+                    `${state.gameFolder}/${game}`
+                );
+            }
         }
     });
 
@@ -113,6 +116,131 @@ describe('ZMachineClient', () => {
     describe('processInput', () => {
         it('should return false when no game is running', () => {
             expect(GameClient.processInput('look')).toBe(false);
+        });
+    });
+
+    describe('the Continue button', () => {
+        let client;
+        let posted;
+
+        beforeEach(() => {
+            posted = { delete: vi.fn().mockResolvedValue({}) };
+            channel.send.mockResolvedValue(posted);
+            client = new ZMachineClient({ channel, gameId: 'g', gameName: 'G' });
+        });
+
+        const buttonMessages = () =>
+            channel.send.mock.calls
+                .map(([sent]) => sent)
+                .filter((sent) => typeof sent === 'object' && sent.components);
+
+        it('should post a Continue button', () => {
+            client.postKeyPrompt();
+
+            const [message] = buttonMessages();
+            expect(message.components[0].components[0]).toEqual(
+                expect.objectContaining({ label: 'Continue', custom_id: 'anykey' })
+            );
+        });
+
+        it('should replace an earlier button rather than leave two', async () => {
+            client.postKeyPrompt();
+            client.postKeyPrompt();
+            await tick(20);
+
+            expect(buttonMessages()).toHaveLength(2);
+            expect(posted.delete).toHaveBeenCalledTimes(1);
+        });
+
+        it('should delete the button when it is cleared', async () => {
+            client.postKeyPrompt();
+
+            client.clearKeyPrompt();
+            await tick(20);
+
+            expect(posted.delete).toHaveBeenCalled();
+        });
+
+        it('should not post a button while silent', () => {
+            client.silent = true;
+
+            client.postKeyPrompt();
+
+            expect(channel.send).not.toHaveBeenCalled();
+        });
+
+        it('should not press a key when the game is not waiting for any key', () => {
+            expect(client.pressKey('u1')).toBe(false);
+        });
+    });
+
+    describe.skipIf(!hasTrinity)('a game that pauses for any key (Trinity)', () => {
+        const textSent = () =>
+            channel.send.mock.calls
+                .map(([sent]) => (typeof sent === 'string' ? sent : sent.content))
+                .join('\n');
+
+        beforeEach(async () => {
+            channel.send.mockResolvedValue({ delete: vi.fn().mockResolvedValue({}) });
+            GameClient.startGame('trinity.z4');
+            await tick(800);
+        });
+
+        it('should offer Continue on "Press any key to begin"', () => {
+            expect(textSent()).toContain('[Press any key to begin.]');
+            const withButton = channel.send.mock.calls.filter(
+                ([sent]) => typeof sent === 'object' && sent.components
+            );
+            expect(withButton).toHaveLength(1);
+        });
+
+        it('should continue when the button is pressed', async () => {
+            expect(GameClient.pressKey('u1')).toBe(true);
+            await tick(500);
+
+            expect(textSent()).toContain('Sharp words between the superpowers');
+            expect(GameClient.pressKey('u1')).toBe(false);
+        });
+
+        it('should keep a command typed at the prompt instead of losing it', async () => {
+            GameClient.handleMessage(message('look', 'u1'));
+            await tick(800);
+
+            // The key was pressed and "look" was then used as the first command
+            expect(textSent()).toContain('Palace Gate');
+            expect(textSent()).not.toContain('[What?]');
+        });
+
+        it('should get past the prompt to restore a save into a fresh game', async () => {
+            // Make a save from a played game first
+            GameClient.pressKey('u1');
+            await tick(500);
+            const savePath = await GameClient.autoSave('u1');
+            expect(savePath).toMatch(/-autosave\.qzl$/);
+            GameClient.stopGame();
+
+            const fresh = new ZMachineClient({ channel, gameId: 'g', gameName: 'G' });
+            try {
+                fresh.startGame('trinity.z4');
+                await tick(800);
+                channel.send.mockClear();
+
+                expect(await fresh.restoreGame(savePath)).toBe(true);
+                await tick(500);
+                fresh.processInput('look');
+                await tick(500);
+
+                expect(textSent()).toContain('Palace Gate');
+            } finally {
+                fresh.stopGame();
+            }
+        });
+
+        it('should be able to save while paused on the prompt', async () => {
+            const savePath = await GameClient.autoSave('u1');
+
+            expect(savePath).toMatch(/-autosave\.qzl$/);
+            expect(fs.existsSync(savePath)).toBe(true);
         });
     });
 

@@ -152,6 +152,12 @@ and V5 games it comes from the game's upper window, and any other positioned tex
 a form) is sent as a code block so its layout survives. Text the game aligns with
 spaces in its main window, such as a quote with an indented attribution, is also put in a code block. `/pause` makes the bot ignore messages, which is useful in games where time advances.
 
+Some games stop at a "press any key" prompt, such as `[Press any key to begin.]`. Discord has no key presses, so the
+bot adds a **Continue** button under the prompt. Anyone in the thread can click it, or just type the next command: the
+bot presses a key and then uses what you typed as your command. Prompts that want a particular key (a menu choice, yes
+or no) get no button; type the key. The bot recognises "press any key" prompts from the wording of the game's last
+lines, so a game with unusual wording may need you to type something instead.
+
 ### Threads
 
 -   `/start` in a text channel plays the game in your thread for it. Threads are named `<game> - <player>`, and an

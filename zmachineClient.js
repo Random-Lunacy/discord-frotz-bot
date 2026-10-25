@@ -27,6 +27,12 @@ ZLogger.setLevel(LogLevel.WARN);
 const MAX_RESTORE_CHOICES = 10;
 const AUTOSAVE_LABEL = 'autosave';
 
+// customId of the Continue button (handled in keyPrompt.js)
+export const KEY_BUTTON_ID = 'anykey';
+
+// The most "press any key" screens in a row that are skipped to reach a line prompt
+const MAX_KEY_PROMPTS = 5;
+
 /**
  * Plays one game in one Discord channel (or thread). Each running game has its own client.
  */
@@ -103,6 +109,7 @@ export class ZMachineClient extends EventEmitter {
             this.input = new DiscordInputProcessor(this.screen, {
                 save: () => this.promptSaveName(),
                 restore: () => this.promptRestoreName(),
+                anyKey: () => this.postKeyPrompt(),
             });
 
             // Quetzal (.qzl) is the same save format dfrotz writes
@@ -162,6 +169,7 @@ export class ZMachineClient extends EventEmitter {
         });
 
         this.cancelPrompt();
+        this.clearKeyPrompt();
         this.machine = null;
         this.say(
             `**${name}** has ended. Use \`/start\` to play again or \`/restore\` to continue from a save.`
@@ -328,8 +336,85 @@ export class ZMachineClient extends EventEmitter {
         const accepted = this.input.submit(message);
         if (accepted) {
             this.lastUserId = userId;
+            this.clearKeyPrompt();
         }
         return accepted;
+    }
+
+    /**
+     * Post the Continue button for a game that is waiting for any key. Discord has no key presses,
+     * so the player can click the button or just type their next command.
+     */
+    postKeyPrompt() {
+        if (this.silent) {
+            return;
+        }
+
+        this.clearKeyPrompt();
+        this.keyPromptMessage = this.channel
+            .send({
+                content: '-# Press Continue, or type your next command.',
+                components: [
+                    {
+                        type: 1,
+                        components: [
+                            {
+                                type: 2,
+                                style: 1,
+                                label: 'Continue',
+                                custom_id: KEY_BUTTON_ID,
+                            },
+                        ],
+                    },
+                ],
+            })
+            .catch((error) => {
+                Logger.log({
+                    level: 'error',
+                    message: `Error sending the Continue button: ${error.message}`,
+                    stack: error.stack,
+                });
+                return null;
+            });
+    }
+
+    /**
+     * Take the Continue button away once it has been answered.
+     */
+    clearKeyPrompt() {
+        const posted = this.keyPromptMessage;
+        this.keyPromptMessage = null;
+        posted?.then((message) => message?.delete?.()).catch(() => {});
+    }
+
+    /**
+     * Press a key for a game waiting on a "press any key" prompt (the Continue button).
+     *
+     * @param {string} userId - The user who pressed the button.
+     * @return {boolean} False if the game is not waiting for any key any more.
+     */
+    pressKey(userId) {
+        if (!this.machine || !this.input?.anyKeyPending) {
+            return false;
+        }
+        return this.processInput('\r', userId);
+    }
+
+    /**
+     * Press Enter at any "press any key" prompts so the game gets to a line prompt, where
+     * `save` or `restore` can be typed. Players' typing is not affected.
+     *
+     * @return {Promise<boolean>} False if the game did not become ready.
+     */
+    async passAnyKeyPrompts() {
+        for (let i = 0; i < MAX_KEY_PROMPTS && this.input?.anyKeyPending; i++) {
+            this.input.submit('\r');
+            this.clearKeyPrompt();
+            if (!(await this.whenReady())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -349,7 +434,7 @@ export class ZMachineClient extends EventEmitter {
         try {
             // A question waiting on a player will never be answered now
             this.cancelPrompt();
-            if (!(await this.whenReady())) {
+            if (!(await this.whenReady()) || !(await this.passAnyKeyPrompts())) {
                 return null;
             }
 
@@ -379,6 +464,7 @@ export class ZMachineClient extends EventEmitter {
      */
     stopGame() {
         this.cancelPrompt();
+        this.clearKeyPrompt();
         if (this.machine) {
             this.input.cancelInput(this.machine);
             this.machine.quit();
@@ -542,9 +628,14 @@ export class ZMachineClient extends EventEmitter {
      * Restore the game from the specified path (used by the /restore command).
      *
      * @param {string} savePath - The path to the save file to be restored.
+     * @return {Promise<boolean>} False if the game was not ready to restore.
      */
-    restoreGame(savePath) {
+    async restoreGame(savePath) {
+        if (!(await this.passAnyKeyPrompts())) {
+            return false;
+        }
         this.input.setNextFilename(savePath);
         this.input.submit('restore');
+        return true;
     }
 }
