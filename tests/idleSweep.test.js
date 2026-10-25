@@ -35,18 +35,27 @@ describe('announceIdleStop', () => {
         };
     });
 
-    it('should say where the game was saved and how to resume', async () => {
+    it('should describe the save in friendly terms, not by its file name', async () => {
         await announceIdleStop({
             session,
-            savePath: '/games/zork1-t1-u1-100-autosave.qzl',
+            savePath: '/games/zork1-555-123-1700000000-autosave.qzl',
         });
 
         const { content, allowedMentions } = session.channel.send.mock.calls[0][0];
         expect(content).toContain('**Zork I** was idle for 2 hours');
-        expect(content).toContain('`zork1-t1-u1-100-autosave.qzl`');
-        expect(content).not.toContain('/games/');
+        expect(content).toContain('"autosave" <t:1700000000:f>');
+        expect(content).not.toContain('.qzl');
+        expect(content).not.toContain('zork1-555');
         expect(content).toContain('`/restore`');
         expect(allowedMentions).toEqual({ parse: [] });
+    });
+
+    it('should not fail on a save file whose name it cannot read', async () => {
+        await announceIdleStop({ session, savePath: '/games/odd.qzl' });
+
+        const { content } = session.channel.send.mock.calls[0][0];
+        expect(content).toContain('saved it as a save');
+        expect(content).not.toContain('odd.qzl');
     });
 
     it('should warn when the game could not be saved', async () => {

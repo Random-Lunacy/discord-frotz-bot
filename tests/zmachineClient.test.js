@@ -430,6 +430,15 @@ describe('ZMachineClient', () => {
                 expect(sentText().join('\n')).toContain('Saving as');
             });
 
+            it('should say what it is saving as, without the file name', async () => {
+                await play('save', 'Before the Troll');
+
+                const said = sentText().join('\n');
+                expect(said).toContain('Saving as "before_the_troll".');
+                expect(said).not.toContain('.qzl');
+                expect(said).not.toContain('zork1-555');
+            });
+
             it('should use the default name when the player skips', async () => {
                 await play('save', 'skip');
 
@@ -492,6 +501,8 @@ describe('ZMachineClient', () => {
                 const listing = sentText().join('\n');
                 expect(listing).toContain('Which save do you want to restore?');
                 expect(listing).toContain('"behind_house"');
+                expect(listing).not.toContain('.qzl');
+                expect(listing).toMatch(/<t:\d+:f>/);
 
                 await play('1');
                 await play('look');

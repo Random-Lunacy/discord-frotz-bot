@@ -1,4 +1,4 @@
-import path from 'path';
+import { describeSavePath } from './saves.js';
 import { sessions } from './sessions.js';
 import { Logger } from './logger.js';
 
@@ -16,7 +16,7 @@ const SHUTDOWN_TIMEOUT_MS = 15_000;
 export async function announceShutdown({ session, savePath }) {
     const name = session.game.name;
     const content = savePath
-        ? `I'm shutting down or restarting, so I saved **${name}** (\`${path.basename(savePath)}\`). ` +
+        ? `I'm shutting down or restarting, so I saved **${name}** as ${describeSavePath(savePath, { user: false })}. ` +
           'Use `/restore` in this thread to pick up where you left off once I\'m back.'
         : `I'm shutting down or restarting, and **${name}** could not be saved, so anything since your last save is lost. ` +
           'Use `/restore` in this thread to go back to a save once I\'m back.';

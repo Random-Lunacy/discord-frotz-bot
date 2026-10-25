@@ -183,3 +183,30 @@ export function gameForChannel(folder, games, channel) {
             .find((game) => channel.name?.startsWith(`${game.name} - `)) ?? null
     );
 }
+
+/**
+ * Describe a save for a player: its name, who saved it and when, never the file name. The user and
+ * the time use Discord markup, so they show as a name and in the reader's own time zone.
+ *
+ * @param {object} save - A save from parseSaveName or listSaves.
+ * @param {object} [options]
+ * @param {boolean} [options.user] - Include who saved it (default true).
+ * @return {string} For example `"before the troll" saved by <@123> <t:1700000000:f>`.
+ */
+export function describeSave(save, { user = true } = {}) {
+    const name = save.label ? `"${save.label}" ` : '';
+    const by = user && save.userId ? `saved by <@${save.userId}> ` : '';
+    return `${name}${by}<t:${save.time}:f>`;
+}
+
+/**
+ * Describe the save in a file for a player (see describeSave), without ever showing the file name.
+ *
+ * @param {string} file - Path of a save file.
+ * @param {object} [options] - Passed to describeSave.
+ * @return {string} The description, or 'a save' if the name isn't one of ours.
+ */
+export function describeSavePath(file, options) {
+    const save = parseSaveName(file);
+    return save ? describeSave(save, options) : 'a save';
+}
