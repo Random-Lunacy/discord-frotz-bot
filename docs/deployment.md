@@ -160,6 +160,10 @@ node --version
 (Use `setup_24.x` for 24.) See [NodeSource's instructions](https://github.com/nodesource/distributions) for the
 current details.
 
+If `apt-cache policy nodejs` shows a `nodesource` version that is installed but lists no NodeSource repository (the
+only source for it is `/var/lib/dpkg/status`), node was installed from NodeSource once and its repository has since
+gone, so apt cannot see anything newer. The same commands fix that: the setup script adds the repository again.
+
 If node came from Ubuntu's own `nodejs` package, this is the way to get a newer one: Ubuntu does not offer Node 22,
 which is why `apt upgrade` shows nothing. NodeSource's `nodejs` includes npm, so if apt stops with a message that
 `nodejs` conflicts with `npm`, remove Ubuntu's separate package first (`sudo apt remove npm`) and run the install
