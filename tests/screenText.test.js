@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     describeUpperWindow,
+    escapeMarkdown,
     fence,
     fenceAlignedText,
     isAligned,
@@ -168,5 +169,73 @@ describe('isFailureNotice', () => {
         'You have failed.\n\nThe end.',
     ])('should not treat %j as the notice', (text) => {
         expect(isFailureNotice(text)).toBe(false);
+    });
+});
+
+describe('escapeMarkdown', () => {
+    it('should escape the characters Discord uses for formatting', () => {
+        expect(escapeMarkdown('* PART I *')).toBe('\\* PART I \\*');
+        expect(escapeMarkdown('a_b~c`d|e\\f')).toBe('a\\_b\\~c\\`d\\|e\\\\f');
+    });
+
+    it('should escape a leading quote, heading or list marker', () => {
+        expect(escapeMarkdown('> quoted')).toBe('\\> quoted');
+        expect(escapeMarkdown('# Title')).toBe('\\# Title');
+        expect(escapeMarkdown('- item')).toBe('\\- item');
+    });
+
+    it('should leave plain text alone', () => {
+        expect(escapeMarkdown('Palace Gate, 5:00 a.m.')).toBe('Palace Gate, 5:00 a.m.');
+    });
+});
+
+describe('describeUpperWindow: status line or title', () => {
+    const width = 80;
+    const row = (text, indent = 0) => (' '.repeat(indent) + text).padEnd(width, ' ');
+    const reverse = (from, to) =>
+        Array.from({ length: width }, (_, column) => column >= from && column < to);
+    const none = () => Array.from({ length: width }, () => false);
+
+    it('should treat a row in reverse video across the whole width as a status line', () => {
+        const rows = [row('Palace Gate', 1)];
+
+        expect(describeUpperWindow(rows, [reverse(0, width)])).toEqual({
+            status: 'Palace Gate',
+            block: null,
+        });
+    });
+
+    it('should treat a row highlighted only around its text as a title', () => {
+        const rows = ['', '', row('* PART I *', 34), ''].map((text) => text.padEnd(width, ' '));
+        const cells = [none(), none(), reverse(32, 46), none()];
+
+        expect(describeUpperWindow(rows, cells)).toEqual({
+            status: null,
+            block: '**\\* PART I \\***',
+        });
+    });
+
+    it('should keep a status line when no style information is given', () => {
+        expect(describeUpperWindow([row('Score: 3', 60)])).toEqual({
+            status: 'Score: 3',
+            block: null,
+        });
+    });
+
+    it('should keep a status line when nothing in the row is in reverse video', () => {
+        expect(describeUpperWindow([row('Score: 3', 60)], [none()])).toEqual({
+            status: 'Score: 3',
+            block: null,
+        });
+    });
+
+    it('should still use a code block for several rows, whatever their styles', () => {
+        const rows = [row('SOFTWARE LICENCE APPLICATION', 26), row('Last name:', 22)];
+
+        const { status, block } = describeUpperWindow(rows, [reverse(20, 60), none()]);
+
+        expect(status).toBeNull();
+        expect(block).toContain('```');
+        expect(block).toContain('Last name:');
     });
 });

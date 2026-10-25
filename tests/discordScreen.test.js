@@ -177,6 +177,61 @@ describe('DiscordScreen', () => {
             expect(status).toBe('Visible one');
         });
 
+        describe('one row with reverse video', () => {
+            const REVERSE = 1;
+
+            const drawStyled = (line, column, text, style) => {
+                screen.setOutputWindow(v5, 1);
+                screen.setCursorPosition(v5, line, column, 1);
+                screen.setTextStyle(v5, style);
+                screen.print(v5, text);
+                screen.setTextStyle(v5, 0);
+                screen.setOutputWindow(v5, 0);
+            };
+
+            it('should show a status bar highlighted across the row as a status line', () => {
+                screen.splitWindow(v5, 1);
+                drawStyled(1, 1, ' '.repeat(80), REVERSE);
+                drawStyled(1, 2, 'At End Of Road', REVERSE);
+                drawStyled(1, 40, 'Score: 36    Moves: 1', REVERSE);
+                screen.print(v5, 'You are at the end of a road.');
+                screen.flush();
+
+                expect(onFlush).toHaveBeenCalledWith(
+                    'You are at the end of a road.',
+                    'At End Of Road · Score: 36 · Moves: 1',
+                    null
+                );
+            });
+
+            it('should show a title highlighted only around its text as a bold line', () => {
+                screen.splitWindow(v5, 7);
+                drawStyled(5, 33, ' * PART I * ', REVERSE);
+                screen.print(v5, '[Hit any key to continue.]');
+                screen.flush();
+
+                expect(onFlush).toHaveBeenCalledWith(
+                    '[Hit any key to continue.]',
+                    null,
+                    '**\\* PART I \\***'
+                );
+            });
+
+            it('should not send the same title twice', () => {
+                screen.splitWindow(v5, 7);
+                drawStyled(5, 33, ' * PART I * ', REVERSE);
+                screen.print(v5, 'One.');
+                screen.flush();
+                screen.print(v5, 'Two.');
+                screen.flush();
+
+                expect(onFlush.mock.calls.map(([, , block]) => block)).toEqual([
+                    '**\\* PART I \\***',
+                    null,
+                ]);
+            });
+        });
+
         it('should send a block again if it goes away and comes back', () => {
             screen.splitWindow(v5, 2);
             drawAt(1, 1, 'FORM');
