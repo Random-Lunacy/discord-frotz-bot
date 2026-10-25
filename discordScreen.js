@@ -1,4 +1,4 @@
-import { BaseScreen, translateFont3Text } from 'rezrov-zmachine';
+import { BaseScreen, TextStyle, translateFont3Text } from 'rezrov-zmachine';
 import { describeUpperWindow, fenceAlignedText, isFailureNotice } from './screenText.js';
 
 /**
@@ -103,7 +103,13 @@ export class DiscordScreen extends BaseScreen {
         this.lastText = text;
 
         // V1-V3 games set the status line directly; V4+ games draw it in the upper window
-        const upper = describeUpperWindow(this.upperWindowBuffer.slice(0, this.upperWindowHeight));
+        const visible = this.upperWindowHeight;
+        const upper = describeUpperWindow(
+            this.upperWindowBuffer.slice(0, visible),
+            this.upperWindowStyleBuffer
+                .slice(0, visible)
+                .map((row) => row.map((style) => (style & TextStyle.ReverseVideo) !== 0))
+        );
         const statusLine = this.status ?? upper.status;
 
         const status = statusLine !== null && statusLine !== this.lastStatus ? statusLine : null;

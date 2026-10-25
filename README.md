@@ -149,7 +149,8 @@ While a game is running, every message in its thread is sent to the game as a co
 `restore`, `undo` and `quit` commands all work. Players leave a game themselves by typing `quit` and answering the
 game's own confirmation. A game's status line (location with score and moves, or the time) is shown above a reply when it has changed. For V4
 and V5 games it comes from the game's upper window, and any other positioned text in that window (a title screen, a panel,
-a form) is sent as a code block so its layout survives. Text the game aligns with
+a form) is sent as a code block so its layout survives. A single highlighted title (such as A Mind Forever Voyaging's
+"PART I") is shown as a bold line. Text the game aligns with
 spaces in its main window, such as a quote with an indented attribution, is also put in a code block. `/pause` makes the bot ignore messages, which is useful in games where time advances.
 
 Some games stop at a "press any key" prompt, such as `[Press any key to begin.]`. Discord has no key presses, so the

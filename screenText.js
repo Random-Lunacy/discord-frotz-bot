@@ -43,14 +43,34 @@ export function trimRows(rows) {
     return trimmed.map((row) => row.slice(indent));
 }
 
+// A status line is drawn in reverse video across the whole row. A row highlighted only around its text
+// is a title or banner instead (A Mind Forever Voyaging's "* PART I *").
+const STATUS_LINE_COVERAGE = 0.9;
+
 /**
- * Describe the upper window of a V4+ game: one row is a status line, several rows are a block of
- * positioned text to show as it was laid out.
+ * Escape the characters Discord would otherwise treat as formatting.
+ *
+ * @param {string} text - Text to show as it is.
+ * @return {string} The escaped text.
+ */
+export function escapeMarkdown(text) {
+    return text.replace(/([\\*_~`|])/g, '\\$1').replace(/^([>#-])/, '\\$1');
+}
+
+/**
+ * Describe the upper window of a V4+ game: a status line, a title, or a block of positioned text to
+ * show as it was laid out.
+ *
+ * A single row is a status line when it is in reverse video across the whole row (or no reverse
+ * video information is given), and a title when only its text is highlighted. Several rows are a
+ * code block.
  *
  * @param {string[]} rows - The rows of the upper window that are on screen.
- * @return {{status: string|null, block: string|null}} At most one of the two is set.
+ * @param {boolean[][]} [reverse] - For each row, which cells are in reverse video.
+ * @return {{status: string|null, block: string|null}} At most one of the two is set; a title is
+ *     returned as a block, a message of its own.
  */
-export function describeUpperWindow(rows) {
+export function describeUpperWindow(rows, reverse) {
     const lines = trimRows(rows);
     const used = lines.filter(Boolean);
 
@@ -59,9 +79,20 @@ export function describeUpperWindow(rows) {
     }
 
     if (used.length === 1) {
+        const text = used[0].trim();
+
+        const rowIndex = rows.findIndex((row) => row.trim());
+        const cells = reverse?.[rowIndex];
+        if (cells) {
+            const width = Math.max(rows[rowIndex].length, cells.length) || 1;
+            const coverage = cells.filter(Boolean).length / width;
+            if (coverage > 0 && coverage < STATUS_LINE_COVERAGE) {
+                return { status: null, block: `**${escapeMarkdown(text)}**` };
+            }
+        }
+
         // "Location       Score: 36   Moves: 1" -> "Location · Score: 36 · Moves: 1"
-        const status = used[0]
-            .trim()
+        const status = text
             .split(/\s{2,}/)
             .join(' · ')
             .replace(/: · /g, ': ');
