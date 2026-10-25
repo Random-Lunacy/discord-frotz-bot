@@ -43,13 +43,17 @@ and a crash was restarted with a new process. Not yet run on the production serv
     ```
     If node was installed with nvm, its path contains the version (for example `/home/you/.nvm/versions/node/v22.12.0/bin/node`);
     systemd does not load nvm, so use that full path. It changes when you switch versions.
-2. Copy [`deploy/frotz-bot.service`](../deploy/frotz-bot.service) to `/etc/systemd/system/frotz-bot.service` and edit
-   the three lines marked in its header: `User`, `WorkingDirectory` and `ExecStart`.
+2. Make a copy of [`deploy/frotz-bot.service`](../deploy/frotz-bot.service) in your home folder, edit the three lines
+   marked in its header (`User`, `WorkingDirectory` and `ExecStart`), and check it. None of this needs `sudo`; only
+   the last command does, because `/etc/systemd/system` belongs to root.
     ```sh
-    sudo cp deploy/frotz-bot.service /etc/systemd/system/frotz-bot.service
-    sudoedit /etc/systemd/system/frotz-bot.service
-    sudo systemd-analyze verify /etc/systemd/system/frotz-bot.service
+    cp ~/discord-frotz-bot/deploy/frotz-bot.service ~/frotz-bot.service
+    nano ~/frotz-bot.service                       # or any editor
+    systemd-analyze verify ~/frotz-bot.service     # no output means it is fine
+    sudo cp ~/frotz-bot.service /etc/systemd/system/frotz-bot.service
     ```
+   To change the installed unit later, edit it with `sudo systemctl edit --full frotz-bot` (or edit your copy and
+   `sudo cp` it again), then run `sudo systemctl daemon-reload`.
 3. **Remove anything else that starts the bot.** If a crontab entry (`crontab -l`, for example
    `@reboot sh /home/you/startFrotzBot.sh`) or another startup script launches it, delete that line with `crontab -e`.
    Two copies of the bot on one token would each answer every command, and after a reboot cron would start the second
@@ -60,7 +64,8 @@ and a crash was restarted with a new process. Not yet run on the production serv
     sudo systemctl enable --now frotz-bot
     ```
 
-Day to day:
+Day to day (`systemctl status` works without `sudo`, and so does `journalctl` if you are in the `adm` group, which the
+first user on an Ubuntu install is; starting, stopping and restarting need `sudo`):
 
 ```sh
 systemctl status frotz-bot          # is it running?
