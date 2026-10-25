@@ -117,13 +117,14 @@ export function createShutdownHandler({ client, exit = process.exit, timeoutMs }
 }
 
 /**
- * Save running games when the bot is told to stop (Ctrl+C, `kill`, a service restart).
+ * Save running games when the bot is told to stop: Ctrl+C (SIGINT), `kill` or a service stopping or
+ * restarting (SIGTERM), or its terminal going away, for example `screen -X quit` (SIGHUP).
  *
  * @param {object} client - The Discord client.
  */
 export function registerShutdownHandlers(client) {
     const handler = createShutdownHandler({ client });
-    for (const signal of ['SIGINT', 'SIGTERM']) {
+    for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
         process.on(signal, () => handler(signal));
     }
 }
