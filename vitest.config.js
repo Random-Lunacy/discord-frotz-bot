@@ -10,6 +10,8 @@ export default defineConfig({
             reporter: ['text', 'json-summary', 'json'],
             reportOnFailure: true,
 
+            // Count every source file, including ones no test loads, so gaps show up in the report
+            include: ['*.js', 'events/**/*.js'],
             exclude: ['node_modules/', 'tests/', 'coverage/', '**/*.config.js'],
         },
     },
