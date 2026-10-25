@@ -33,8 +33,9 @@ A forced kill (`kill -9`), a crash, or a power cut cannot be saved. Games are on
 
 ## systemd (recommended)
 
-Tested here with a stand-in process under real systemd: `systemctl stop` sent SIGTERM and the process exited cleanly,
-and a crash was restarted with a new process. Not yet run on the production server.
+Tested on an Ubuntu 24.04 server: stopping the service with a game running saved the game, and after updating the
+bot and starting the service again, `/restore` in the game's thread brought it back. Also tested with a stand-in process
+under systemd: a crash was restarted with a new process (`Restart=on-failure`).
 
 1. Find the full path to node, and check its version is 22.12 or later:
     ```sh
