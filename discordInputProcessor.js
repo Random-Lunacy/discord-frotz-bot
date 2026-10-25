@@ -101,8 +101,15 @@ export class DiscordInputProcessor extends BaseInputProcessor {
             return filename;
         }
 
-        return operation === 'save'
+        const filename = await (operation === 'save'
             ? this.prompts.save()
-            : this.prompts.restore();
+            : this.prompts.restore());
+
+        // No filename means the bot cancelled it and has said so. The game will now print "Failed.",
+        // which would only repeat that.
+        if (!filename) {
+            this.screen.suppressFailure = true;
+        }
+        return filename;
     }
 }

@@ -5,6 +5,7 @@ import {
     fenceAlignedText,
     isAligned,
     isAnyKeyPrompt,
+    isFailureNotice,
     trimRows,
 } from '../screenText.js';
 
@@ -148,5 +149,24 @@ describe('isAnyKeyPrompt', () => {
         const text = '[Press any key to continue.]\n\nA long passage.\n\nMore story.\n\nWhat now?';
 
         expect(isAnyKeyPrompt(text)).toBe(false);
+    });
+});
+
+describe('isFailureNotice', () => {
+    it.each(['Failed.', 'Failed', '  Failed.  ', '[Save failed]', 'Restore failed.', '[Restore failed.]'])(
+        'should recognise %j',
+        (text) => {
+            expect(isFailureNotice(text)).toBe(true);
+        }
+    );
+
+    it.each([
+        '',
+        'Failed. Try again.',
+        'Your attempt failed miserably.',
+        'The lock fails.',
+        'You have failed.\n\nThe end.',
+    ])('should not treat %j as the notice', (text) => {
+        expect(isFailureNotice(text)).toBe(false);
     });
 });

@@ -10,6 +10,7 @@ import { sessions } from '../../sessions.js';
 import { launchGame } from '../../launchGame.js';
 import dateFormat from 'dateformat';
 import {
+    describeSavePath,
     gameForChannel,
     listSaves,
     parseSaveName,
@@ -423,7 +424,6 @@ async function handleRestoreForActiveGame(interaction, session) {
 
             // Use the original interaction for response updates
             let savePath = selection;
-            let restoredTime = new Date(parseSaveName(savePath).time * 1000);
 
             session.touch();
             if (!(await session.client.restoreGame(savePath))) {
@@ -435,10 +435,7 @@ async function handleRestoreForActiveGame(interaction, session) {
             }
 
             await interaction.editReply({
-                content: `Restoring ${displayName} with save from ${dateFormat(
-                    restoredTime,
-                    'default'
-                )}.`,
+                content: `Restoring ${displayName} from ${describeSavePath(savePath, { user: false })}.`,
                 components: [],
             });
         } catch (error) {
@@ -491,7 +488,6 @@ async function handleRestoreForActiveGame(interaction, session) {
  */
 async function restoreSaveFile(savePath, interaction, session) {
     try {
-        let restoredTime = new Date(parseSaveName(savePath).time * 1000);
 
         // The game has to reach its first prompt before it can restore
         if (!(await session.client.whenReady())) {
@@ -505,10 +501,7 @@ async function restoreSaveFile(savePath, interaction, session) {
 
         // Always use editReply on the original interaction
         await interaction.editReply({
-            content: `Restoring ${session.game.name} with save from ${dateFormat(
-                restoredTime,
-                'default'
-            )}.`,
+            content: `Restoring ${session.game.name} from ${describeSavePath(savePath, { user: false })}.`,
             components: [],
         });
     } catch (error) {

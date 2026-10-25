@@ -18,13 +18,17 @@ const session = (name, send = vi.fn().mockResolvedValue({})) => ({
 });
 
 describe('announceShutdown', () => {
-    it('should say where the game was saved and how to resume', async () => {
+    it('should describe the save in friendly terms, not by its file name', async () => {
         const s = session('Zork I');
 
-        await announceShutdown({ session: s, savePath: '/games/zork1-t-u-1-autosave.qzl' });
+        await announceShutdown({
+            session: s,
+            savePath: '/games/zork1-555-123-1700000000-autosave.qzl',
+        });
 
         const { content, allowedMentions } = s.channel.send.mock.calls[0][0];
-        expect(content).toContain('saved **Zork I** (`zork1-t-u-1-autosave.qzl`)');
+        expect(content).toContain('saved **Zork I** as "autosave" <t:1700000000:f>');
+        expect(content).not.toContain('.qzl');
         expect(content).not.toContain('/games/');
         expect(content).toContain('`/restore`');
         expect(allowedMentions).toEqual({ parse: [] });
@@ -57,7 +61,7 @@ describe('shutdownGames', () => {
         const a = session('Zork I');
         const b = session('Sorcerer');
         mockSessions.autoSaveAll.mockResolvedValue([
-            { session: a, savePath: '/games/a.qzl' },
+            { session: a, savePath: '/games/zork1-1-2-3-autosave.qzl' },
             { session: b, savePath: null },
         ]);
 

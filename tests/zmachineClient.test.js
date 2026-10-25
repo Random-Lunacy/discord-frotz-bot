@@ -430,6 +430,15 @@ describe('ZMachineClient', () => {
                 expect(sentText().join('\n')).toContain('Saving as');
             });
 
+            it('should say what it is saving as, without the file name', async () => {
+                await play('save', 'Before the Troll');
+
+                const said = sentText().join('\n');
+                expect(said).toContain('Saving as "before_the_troll".');
+                expect(said).not.toContain('.qzl');
+                expect(said).not.toContain('zork1-555');
+            });
+
             it('should use the default name when the player skips', async () => {
                 await play('save', 'skip');
 
@@ -464,6 +473,49 @@ describe('ZMachineClient', () => {
                 expect(savesOnDisk()[0]).toMatch(/-zork1_auto\.qzl$/);
             });
 
+            it('should not repeat the cancellation with the game\'s own Failed.', async () => {
+                await play('save', 'cancel');
+
+                const said = sentText().join('\n');
+                expect(said).toContain('Save cancelled');
+                expect(said).not.toContain('Failed.');
+
+                // And the game carries on as normal
+                channel.send.mockClear();
+                await play('look');
+                expect(sentText().join('\n')).toContain('Behind House');
+            });
+
+            it('should not add Failed. when there are no saves to restore', async () => {
+                await play('restore');
+
+                const said = sentText().join('\n');
+                expect(said).toContain('There are no saves for this game.');
+                expect(said).not.toContain('Failed.');
+            });
+
+            it('should not add Failed. when the player cancels a restore', async () => {
+                await play('save', 'skip');
+                channel.send.mockClear();
+
+                await play('restore', 'cancel');
+
+                const said = sentText().join('\n');
+                expect(said).toContain('Restore cancelled');
+                expect(said).not.toContain('Failed.');
+            });
+
+            it('should still show the game\'s Failed. when a restore really fails', async () => {
+                const junk = `${state.gameFolder}/zork1-555-u1-1-junk.qzl`;
+                fs.writeFileSync(junk, 'this is not a Quetzal file');
+                channel.send.mockClear();
+
+                await GameClient.restoreGame(junk);
+                await tick(300);
+
+                expect(sentText().join('\n')).toContain('Failed.');
+            });
+
             it('should not save when the player cancels', async () => {
                 await play('save', 'cancel');
 
@@ -492,6 +544,8 @@ describe('ZMachineClient', () => {
                 const listing = sentText().join('\n');
                 expect(listing).toContain('Which save do you want to restore?');
                 expect(listing).toContain('"behind_house"');
+                expect(listing).not.toContain('.qzl');
+                expect(listing).toMatch(/<t:\d+:f>/);
 
                 await play('1');
                 await play('look');

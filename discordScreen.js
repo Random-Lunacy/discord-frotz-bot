@@ -1,5 +1,5 @@
 import { BaseScreen, translateFont3Text } from 'rezrov-zmachine';
-import { describeUpperWindow, fenceAlignedText } from './screenText.js';
+import { describeUpperWindow, fenceAlignedText, isFailureNotice } from './screenText.js';
 
 /**
  * Screen for rezrov-zmachine that collects game output as plain text.
@@ -19,6 +19,10 @@ export class DiscordScreen extends BaseScreen {
 
         // What the game last printed before it stopped to wait, used to recognise "press any key"
         this.lastText = '';
+
+        // Set when the bot cancelled a save or restore for the player (and said so itself), so the
+        // game's own "Failed." that follows is dropped
+        this.suppressFailure = false;
     }
 
     getCapabilities() {
@@ -89,6 +93,13 @@ export class DiscordScreen extends BaseScreen {
             .replace(/(\n[ \t]*){3,}/g, '\n\n')
             .trim();
         text = fenceAlignedText(text);
+
+        if (this.suppressFailure) {
+            this.suppressFailure = false;
+            if (isFailureNotice(text)) {
+                text = '';
+            }
+        }
         this.lastText = text;
 
         // V1-V3 games set the status line directly; V4+ games draw it in the upper window
@@ -96,14 +107,16 @@ export class DiscordScreen extends BaseScreen {
         const statusLine = this.status ?? upper.status;
 
         const status = statusLine !== null && statusLine !== this.lastStatus ? statusLine : null;
-        if (statusLine !== null) {
-            this.lastStatus = statusLine;
-        }
 
         const block = upper.block !== null && upper.block !== this.lastBlock ? upper.block : null;
         this.lastBlock = upper.block;
 
         if (text.length > 0 || block !== null) {
+            // Only remember a status line once it has been sent, so a message that is dropped
+            // doesn't lose it
+            if (statusLine !== null) {
+                this.lastStatus = statusLine;
+            }
             this.onFlush(text, status, block);
         }
     }

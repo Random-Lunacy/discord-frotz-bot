@@ -1,4 +1,4 @@
-import path from 'path';
+import { describeSavePath } from './saves.js';
 import { sessions } from './sessions.js';
 import { Logger } from './logger.js';
 
@@ -27,7 +27,7 @@ export async function announceIdleStop({ session, savePath }) {
     const idle = describeMinutes(Math.round(sessions.idleTimeoutMs / 60_000));
     const name = session.game.name;
     const content = savePath
-        ? `**${name}** was idle for ${idle}, so I saved it (\`${path.basename(savePath)}\`) and shut it down to free up resources. ` +
+        ? `**${name}** was idle for ${idle}, so I saved it as ${describeSavePath(savePath, { user: false })} and shut it down to free up resources. ` +
           'Use `/restore` in this thread to pick up where you left off.'
         : `**${name}** was idle for ${idle}, so I shut it down. It could not be saved, so anything since your last save is lost. ` +
           'Use `/restore` in this thread to go back to a save, or `/start` to begin again.';
