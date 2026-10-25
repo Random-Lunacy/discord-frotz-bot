@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { Logger } from '../logger.js';
 import { startIdleSweep } from '../idleSweep.js';
+import { channelRestrictions } from '../channelAccess.js';
 
 const once = true;
 const name = 'ready';
@@ -29,6 +30,22 @@ async function invoke(client) {
     client.application.commands.set(commandsArray);
 
     startIdleSweep();
+
+    const { restricted, ids, invalid } = channelRestrictions();
+    if (restricted) {
+        Logger.log({
+            level: invalid.length || !ids.length ? 'error' : 'info',
+            message: ids.length
+                ? `Commands only work in channels ${ids.join(', ')} and the threads in them`
+                : 'ALLOWED_CHANNELS has no valid channel IDs, so commands are refused everywhere',
+        });
+        if (invalid.length) {
+            Logger.log({
+                level: 'error',
+                message: `Ignoring entries in ALLOWED_CHANNELS that are not channel IDs: ${invalid.join(', ')}`,
+            });
+        }
+    }
 
     Logger.log({
         level: 'info',

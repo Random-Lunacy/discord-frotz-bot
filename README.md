@@ -122,6 +122,7 @@ Settings go in the `.env` file. Only the token and the game folder are required.
 | ---------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DISCORD_TOKEN`        | -         | The bot's token.                                                                                                                             |
 | `GAME_FOLDER`          | -         | Folder holding the game files, `games.json` and the saves, e.g. `./games`.                                                                   |
+| `ALLOWED_CHANNELS`     | any channel | Channel IDs (separated by commas or spaces) the bot answers commands in, and the threads in them. See [Limiting the bot to some channels](#limiting-the-bot-to-some-channels). |
 | `MAX_GAMES`            | `10`      | The most games that can run at once.                                                                                                         |
 | `THREAD_LIFETIME_DAYS` | `7`       | Days a game's thread can go without messages before Discord archives it. `1`, `3` or `7`.                                                    |
 | `IDLE_TIMEOUT_MINUTES` | `60`      | Minutes without a player message before a game is saved and shut down. `0` turns this off.                                                   |
@@ -205,6 +206,30 @@ Games are saved quietly, as an `autosave` that appears in the restore lists, in 
 
 If a game cannot be saved (for example it is not responding) it is stopped without a save, so save before leaving a
 game for a long time.
+
+### Limiting the bot to some channels
+
+By default the bot answers commands in any channel it can see, and `/start` and `/restore` create a thread wherever they
+are used. To keep it out of channels where nobody wants it, set `ALLOWED_CHANNELS` in `.env` to the IDs of the channels
+it should work in (turn on Developer Mode in Discord, then right-click a channel and choose **Copy Channel ID**):
+
+```
+ALLOWED_CHANNELS=1158820946925338686,1158820946925338999
+```
+
+-   Commands work in a listed channel and in any thread in it, which covers the threads the bot makes for games.
+-   Anywhere else a command gets a short reply that only the person who used it can see, naming the allowed channels.
+    Nothing is posted publicly and no thread is made.
+-   Server admins (**Manage Server**) can use `/status` anywhere, since its reply is private.
+-   A thread that already has a game keeps working even if its channel is later taken off the list, so a running game
+    can always be paused or stopped.
+-   Entries that aren't channel IDs (a channel name, for example) are ignored and logged at startup. If none of the
+    entries are valid, commands are refused everywhere and the log says why.
+-   Restart the bot after changing the list.
+
+Discord can also limit where a command works without any help from the bot: in the server's **Settings, Integrations**,
+open the bot and set channel permissions for each command. The bot's own list is easier to keep the same for all
+commands, and works the same whoever administers the server.
 
 ### Troubleshooting
 
