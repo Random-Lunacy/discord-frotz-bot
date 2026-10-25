@@ -124,3 +124,14 @@ export function isAnyKeyPrompt(text) {
     const lastLines = text.trimEnd().split('\n').slice(-2).join('\n');
     return PRESS_KEY.test(lastLines) || BRACKETED_CONTINUE.test(lastLines);
 }
+
+/**
+ * Whether a game's output is just its "Failed." notice for a save or restore that did not happen.
+ * Infocom games print "Failed."; some interpreters' games say "[Save failed]" or "Restore failed."
+ *
+ * @param {string} text - What the game printed.
+ * @return {boolean} True if that is all it said.
+ */
+export function isFailureNotice(text) {
+    return /^\[?\s*(?:(?:save|restore)\s+)?failed\.?\s*\]?$/i.test(text.trim());
+}

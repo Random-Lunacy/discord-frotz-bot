@@ -61,6 +61,26 @@ describe('DiscordInputProcessor', () => {
         expect(prompts.restore).toHaveBeenCalledTimes(1);
     });
 
+    it('should expect the game\'s Failed. notice when the bot cancelled a save or restore', async () => {
+        prompts.save.mockResolvedValue('');
+        prompts.restore.mockResolvedValue('');
+
+        await input.promptForFilename({}, 'save');
+        expect(screen.suppressFailure).toBe(true);
+
+        screen.suppressFailure = false;
+        await input.promptForFilename({}, 'restore');
+        expect(screen.suppressFailure).toBe(true);
+    });
+
+    it('should show the game\'s Failed. notice when a save or restore was really attempted', async () => {
+        await input.promptForFilename({}, 'save');
+        input.setNextFilename('/games/x.qzl');
+        await input.promptForFilename({}, 'restore');
+
+        expect(screen.suppressFailure).toBeFalsy();
+    });
+
     it('should ask the player for a name when the game saves', async () => {
         expect(await input.promptForFilename({}, 'save')).toBe(
             '/games/new-save.qzl'
