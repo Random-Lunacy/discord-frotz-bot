@@ -35,6 +35,9 @@ rezrov's built `dist`, so rebuild it after changing rezrov.
 -   `screenText.js` turns what a game draws into Discord text: a V4+ upper window becomes a status line (one row) or a
     code block (several rows), and aligned main-window paragraphs are put in code blocks. `DiscordScreen.flush()` uses
     it and only sends a status line or block again when it changes.
+-   `keyPrompt.js` handles the Continue button the client posts when a game stops at "press any key" (found by
+    `isAnyKeyPrompt` in `screenText.js`). `DiscordInputProcessor` presses Enter for any typed text at such a prompt and
+    keeps the text as the next command. `restoreGame` and `autoSave` get past these prompts before typing `restore`/`save`.
 -   `saves.js` builds, parses and lists save names: `<game>-<channel>-<user>-<time>[-<label>].qzl` (older saves are
     `<game>-<time>-<user>.qzl`). Game IDs must not contain hyphens.
 -   `sharedData.js` holds config only (`client`, `gameFolder`, `gameList` from `games.json`). There is no global game state.

@@ -16,6 +16,9 @@ export class DiscordScreen extends BaseScreen {
         // What was last sent, so a status line or block is only sent again when it changes
         this.lastStatus = null;
         this.lastBlock = null;
+
+        // What the game last printed before it stopped to wait, used to recognise "press any key"
+        this.lastText = '';
     }
 
     getCapabilities() {
@@ -86,6 +89,7 @@ export class DiscordScreen extends BaseScreen {
             .replace(/(\n[ \t]*){3,}/g, '\n\n')
             .trim();
         text = fenceAlignedText(text);
+        this.lastText = text;
 
         // V1-V3 games set the status line directly; V4+ games draw it in the upper window
         const upper = describeUpperWindow(this.upperWindowBuffer.slice(0, this.upperWindowHeight));

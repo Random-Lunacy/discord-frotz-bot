@@ -1,5 +1,6 @@
 import { sharedData } from '../sharedData.js';
 import { sessions } from '../sessions.js';
+import { handleKeyButton, isKeyButton } from '../keyPrompt.js';
 import { Logger } from '../logger.js';
 
 
@@ -17,6 +18,8 @@ async function invoke(interaction) {
     // The #commands ES6 import-abbreviation is defined in the package.json
     if (interaction.isChatInputCommand())
         (await import(`#commands/${interaction.commandName}`)).invoke(interaction);
+    else if (isKeyButton(interaction))
+        await handleKeyButton(interaction);
 }
 
 // Send messages to the game in the channel or thread they were sent in, if there is one
