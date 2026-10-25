@@ -8,6 +8,7 @@ updating it, and upgrading from the older version that used `dfrotz`.
 -   [systemd (recommended)](#systemd-recommended)
 -   [screen](#screen)
 -   [pm2](#pm2)
+-   [Installing Node.js 22 or later (Ubuntu)](#installing-nodejs-22-or-later-ubuntu)
 -   [Updating](#updating)
 -   [Upgrading from the dfrotz version](#upgrading-from-the-dfrotz-version)
 
@@ -117,6 +118,72 @@ pm2 startup        # prints a command to run once, so pm2 starts at boot
 otherwise, which is too short for the bot to save games. Use `pm2 restart frotz-bot` and `pm2 logs frotz-bot` day to
 day, and start `./frotz-bot.js` directly rather than through `npm`.
 
+## Installing Node.js 22 or later (Ubuntu)
+
+The bot needs Node.js 22.12 or later, and Ubuntu's own packages are older than that. Upgrading Node does not touch a
+bot that is already running (it keeps running on the old version until you restart it), so do this before stopping it.
+
+**1. Find out how the current node was installed.**
+
+```sh
+which -a node                                  # every node on your PATH, in the order they are found
+readlink -f "$(command -v node)"               # where the first one really lives
+dpkg -S "$(readlink -f "$(command -v node)")"  # names a package if it came from apt
+apt-cache policy nodejs                        # which apt repository offers it (look for deb.nodesource.com)
+ls -d ~/.nvm 2>/dev/null                       # exists if nvm is installed
+snap list node 2>/dev/null                     # lists it if it came from snap
+```
+
+| What you see | How it was installed | Go to |
+| --- | --- | --- |
+| `dpkg -S` names `nodejs`, in `/usr/bin` | apt (NodeSource's repository, or Ubuntu's) | A |
+| The path contains `.nvm` | nvm | B |
+| `/usr/local/bin/node`, and `dpkg -S` finds nothing | a downloaded tarball, or the `n` tool | C |
+| `snap list` shows `node` | snap | D |
+
+If apt is not offering a newer node, it is usually because its repository only carries one major version: NodeSource
+has a separate repository for each (20.x, 22.x, 24.x), so moving to a new major version means switching repositories.
+
+**A. apt.** Switch to NodeSource's repository for the version you want (22 and 24 are both fine for the bot; 22 is
+what it is most tested with), and install over the old one. NodeSource's setup script is a download you run as root, so
+read it first if you like:
+
+```sh
+sudo apt install -y curl
+curl -fsSL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh
+less nodesource_setup.sh                        # optional: see what it will do
+sudo -E bash nodesource_setup.sh
+sudo apt install -y nodejs
+node --version
+```
+
+(Use `setup_24.x` for 24.) See [NodeSource's instructions](https://github.com/nodesource/distributions) for the
+current details.
+
+**B. nvm.**
+
+```sh
+nvm install 22
+nvm alias default 22
+node --version
+```
+
+nvm only loads in your own shell. A systemd service, cron, or a boot script does not see it, so those need the full
+path (`which node` after `nvm use 22`, something like `/home/you/.nvm/versions/node/v22.x.y/bin/node`) and that path
+changes whenever you install a new version. If you would rather not track it, install node with option A instead and
+let nvm stay for your own use.
+
+**C. `/usr/local/bin/node`.** If the `n` tool installed it (`command -v n`), `sudo n 22` replaces it. If it came from
+a tarball, the simplest fix is option A **and** removing the old file: `/usr/local/bin` comes before `/usr/bin` in
+`PATH`, so an old node left there keeps winning over the new one. `which -a node` shows whether that has happened.
+
+**D. snap.** `sudo snap refresh node --channel=22/stable` (`snap info node` lists the channels it offers).
+
+**2. Check it.** `node --version` should print 22.12 or later, and `which -a node` should show only the new one. If
+the bot is started by a script or a service, make sure that is the node it uses (a service has its own `ExecStart`
+path, and a screen script uses whatever is first on the PATH it runs with). Then run `npm ci` in the bot's folder again
+and restart the bot.
+
 ## Updating
 
 The bot uses the built `dist` folder of the `rezrov-zmachine` interpreter next to it, so update and rebuild that too.
@@ -139,7 +206,8 @@ inside the bot, in threads. Steps for a server running the old version:
 
 1. **Warn players to save.** The old version cannot save for them: stopping it loses progress that wasn't saved with
    `/save`.
-2. **Check Node.js.** The bot needs 22.12 or later (`node --version`).
+2. **Check Node.js.** The bot needs 22.12 or later (`node --version`). If yours is older, see
+   [Installing Node.js 22 or later](#installing-nodejs-22-or-later-ubuntu).
 3. **Stop the old bot.** For the `screen` script above: `screen -r FROTZ`, then Ctrl+C.
 4. **Get the new code and the interpreter.** In the folder that holds the bot (the new interpreter goes next to it):
     ```sh
