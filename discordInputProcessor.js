@@ -1,4 +1,4 @@
-import { BaseInputProcessor } from 'rezrov-zmachine';
+import { BaseInputProcessor } from '@random-lunacy/rezrov-zmachine';
 import { isAnyKeyPrompt } from './screenText.js';
 
 /**

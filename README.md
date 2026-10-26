@@ -78,42 +78,32 @@ anyone else.
 
 ### Installation
 
-1. Clone the bot and the interpreter side by side. The bot expects `rezrov-zmachine` in a sibling folder
-   (it is referenced as `file:../rezrov-zmachine` in `package.json`).
+1. Clone the bot.
     ```sh
     git clone https://github.com/Random-Lunacy/discord-frotz-bot.git
-    git clone https://github.com/Random-Lunacy/rezrov-zmachine.git
     ```
-2. Build the interpreter.
-    ```sh
-    cd rezrov-zmachine
-    npm install
-    npm run build
-    cd ..
-    ```
-3. Install the bot's NPM packages.
+2. Install the bot's NPM packages. This includes the interpreter, `@random-lunacy/rezrov-zmachine`.
     ```sh
     cd discord-frotz-bot
     npm install
     ```
-4. Create a `.env` file in the repository root from `.env.template`.
+3. Create a `.env` file in the repository root from `.env.template`.
     ```sh
     cp .env.template .env
     ```
-5. Edit the `.env` file and replace `your-token-goes-here` with your bot token. The other settings are optional, see
+4. Edit the `.env` file and replace `your-token-goes-here` with your bot token. The other settings are optional, see
    [Configuration](#configuration).
-6. Copy the Z-machine games files you want your bot to use to the `games` folder.
-7. Create a `games.json` file in the `games` folder from `games/games.json.template`.
+5. Copy the Z-machine games files you want your bot to use to the `games` folder.
+6. Create a `games.json` file in the `games` folder from `games/games.json.template`.
     ```sh
     cp games/games.json.template games/games.json
     ```
-8. Edit `games.json` to include your Z-machine games. See [games/games.md](games/games.md) for more information.
-9. Start the bot from the repository root with `npm run start`. To keep it running on a server, see
+7. Edit `games.json` to include your Z-machine games. See [games/games.md](games/games.md) for more information.
+8. Start the bot from the repository root with `npm run start`. To keep it running on a server, see
    [Running the bot on a server](docs/deployment.md). The slash commands are registered every time the bot
    starts and can take a minute to appear in Discord.
 
-To update later, `git pull` in both folders, run `npm run build` in `rezrov-zmachine`, `npm install` in the bot, and
-restart the bot.
+To update later, `git pull`, run `npm install`, and restart the bot.
 
 ### Configuration
 
@@ -241,7 +231,7 @@ commands, and works the same whoever administers the server.
 | Slash commands are missing or out of date     | Restart the bot, then wait a minute or reload Discord.                                                                 |
 | "Failed to start game: Invalid Z-machine version" | The file isn't a Z-machine story file. Only Z-machine games (`.z1`-`.z8`, or Blorb files containing one) are supported. |
 | The game says "Failed." when restoring        | The save is for a different game file or release, or the file is missing. The reason is in `logs/combined.log`.       |
-| `Cannot find package 'rezrov-zmachine'`       | Clone and build `rezrov-zmachine` next to the bot (see Installation), then run `npm install` again.                   |
+| `Cannot find package '@random-lunacy/rezrov-zmachine'` | Run `npm install` in the bot's folder.                                                                 |
 
 Logs are written to the console and to `logs/combined.log` and `logs/error.log`.
 
@@ -257,8 +247,8 @@ npm run lint-fix    # lint and fix what can be fixed
 ```
 
 Some tests play a real game and are skipped unless `games/zork-i.z3` exists. Pull requests are checked on Node.js 22 and
-24; the workflow checks out and builds `rezrov-zmachine` next to the bot. Rebuild `rezrov-zmachine` after changing it,
-because the bot uses its built `dist` folder. See [CLAUDE.md](CLAUDE.md) for a tour of the code.
+24. To try an unreleased interpreter change, build a local checkout of `rezrov-zmachine` and temporarily point
+`package.json` at it with `file:../rezrov-zmachine` (don't commit that). See [CLAUDE.md](CLAUDE.md) for a tour of the code.
 
 <!-- ROADMAP -->
 

@@ -1,4 +1,4 @@
-import { BaseScreen, TextStyle, translateFont3Text } from 'rezrov-zmachine';
+import { BaseScreen, TextStyle, translateFont3Text } from '@random-lunacy/rezrov-zmachine';
 import { describeUpperWindow, fenceAlignedText, isFailureNotice } from './screenText.js';
 
 /**

@@ -23,23 +23,10 @@ jobs:
               with:
                   path: discord-frotz-bot
 
-            # rezrov-zmachine is referenced as file:../rezrov-zmachine and is not on npm yet
-            - name: Checkout rezrov-zmachine
-              uses: actions/checkout@v4
-              with:
-                  repository: Random-Lunacy/rezrov-zmachine
-                  path: rezrov-zmachine
-
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: ${{ matrix.node-version }}
-
-            - name: Build rezrov-zmachine
-              working-directory: rezrov-zmachine
-              run: |
-                  npm ci
-                  npm run build
 
             - name: Install dependencies
               run: npm ci

@@ -1,14 +1,14 @@
 # discord-frotz-bot
 
 A Discord bot that hosts Z-machine interactive fiction games, one game per Discord thread. Games run in-process on
-[rezrov-zmachine](https://github.com/Random-Lunacy/rezrov-zmachine) (a TypeScript interpreter), linked as
-`file:../rezrov-zmachine`. See README.md for setup, configuration and usage, and docs/deployment.md for running it on a
+[rezrov-zmachine](https://github.com/Random-Lunacy/rezrov-zmachine) (a TypeScript interpreter), installed from npm as
+`@random-lunacy/rezrov-zmachine`. See README.md for setup, configuration and usage, and docs/deployment.md for running it on a
 server.
 
 ## Gotchas
 
--   rezrov-zmachine must be cloned and built (`npm run build`) next to this repo. The bot imports its built `dist`, so
-    rebuild it after changing rezrov. CI does the same as a sibling checkout (`.github/workflows/npm-test.yml`).
+-   rezrov-zmachine comes from npm (`@random-lunacy/rezrov-zmachine`). To try an unreleased interpreter change, build
+    a local checkout and temporarily point `package.json` at it with `file:../rezrov-zmachine`; don't commit that.
 -   Run the bot from the repo root: it reads `./events`, `./games` and `./logs`. In a service or script run
     `node ./frotz-bot.js` directly, not `npm start`: npm does not pass a stop signal on, so the shutdown autosave
     (`shutdown.js`) would not run.
