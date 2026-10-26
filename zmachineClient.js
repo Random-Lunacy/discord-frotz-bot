@@ -3,8 +3,8 @@ import {} from 'dotenv/config';
 import { Logger } from './logger.js';
 import fs from 'fs';
 import { EventEmitter } from 'events';
-import { BlorbParser, Logger as ZLogger, LogLevel, QuetzalFormat, ZMachine } from 'rezrov-zmachine';
-import { FileSystemProvider } from 'rezrov-zmachine/node';
+import { BlorbParser, Logger as ZLogger, LogLevel, QuetzalFormat, ZMachine } from '@random-lunacy/rezrov-zmachine';
+import { FileSystemProvider } from '@random-lunacy/rezrov-zmachine/node';
 import { DiscordScreen } from './discordScreen.js';
 import { DiscordInputProcessor } from './discordInputProcessor.js';
 import {

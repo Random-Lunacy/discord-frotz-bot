@@ -207,11 +207,10 @@ and restart the bot.
 
 ## Updating
 
-The bot uses the built `dist` folder of the `rezrov-zmachine` interpreter next to it, so update and rebuild that too.
-Assuming the folders `discord-frotz-bot` and `rezrov-zmachine` sit side by side:
+The interpreter, `@random-lunacy/rezrov-zmachine`, is an npm dependency, so `npm ci` installs the version recorded in
+`package-lock.json`:
 
 ```sh
-cd ~/rezrov-zmachine && git pull && npm ci && npm run build
 cd ~/discord-frotz-bot && git pull && npm ci
 sudo systemctl restart frotz-bot       # or stop and start it however you run it
 ```
@@ -230,12 +229,9 @@ inside the bot, in threads. Steps for a server running the old version:
 2. **Check Node.js.** The bot needs 22.12 or later (`node --version`). If yours is older, see
    [Installing Node.js 22 or later](#installing-nodejs-22-or-later-ubuntu).
 3. **Stop the old bot.** For the `screen` script above: `screen -r FROTZ`, then Ctrl+C.
-4. **Get the new code and the interpreter.** In the folder that holds the bot (the new interpreter goes next to it):
+4. **Get the new code.** `npm ci` also installs the interpreter:
     ```sh
-    cd ~/discord-frotz-bot && git pull
-    cd ~ && git clone https://github.com/Random-Lunacy/rezrov-zmachine.git
-    cd ~/rezrov-zmachine && npm ci && npm run build
-    cd ~/discord-frotz-bot && npm ci
+    cd ~/discord-frotz-bot && git pull && npm ci
     ```
 5. **Check `.env`.** `DISCORD_TOKEN` and `GAME_FOLDER` carry over. The new optional settings (limiting channels, the
    idle timeout, thread lifetime, and so on) are in [`.env.template`](../.env.template) and the README.
