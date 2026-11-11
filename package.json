@@ -16,7 +16,7 @@
     "dependencies": {
         "@random-lunacy/rezrov-zmachine": "^1.0.0",
         "dateformat": "^5.0.3",
-        "discord.js": "^14.25.1",
+        "discord.js": "^14.28.1",
         "dotenv": "^18.0.9",
         "glob": "^14.0.4",
         "winston": "^3.18.3"
